@@ -3,6 +3,10 @@ uuid = "c63725ce-1dd3-4448-9322-cc096a1b1cd3"
 authors = ["J.J. Gomez-Cadenas <jjgomezcadenas@gmail.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+
 [compat]
 julia = "1.6"
 
