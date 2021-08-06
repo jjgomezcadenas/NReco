@@ -1,5 +1,4 @@
 module NReco
 
-# Write your package code here.
-
+include("math.jl")
 end
