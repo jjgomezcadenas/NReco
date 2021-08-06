@@ -1,0 +1,13 @@
+name = "NReco"
+uuid = "c63725ce-1dd3-4448-9322-cc096a1b1cd3"
+authors = ["J.J. Gomez-Cadenas <jjgomezcadenas@gmail.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1.6"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
