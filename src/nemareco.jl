@@ -322,13 +322,15 @@ function nema_dict!(event       ::Integer,
 						n3d         ::Dict)
 
 
-	result = recovent(event, dconf, df1, df2,primaries, sensor_xyz, waveform, lor_algo)
+	result = recovent(event, dc, df1, df2,primaries, sensor_xyz, waveform, lor_algo)
 	
 	if result !== nothing
 		hitdf1, hitdf2, evtd = result 
 		ks =  keys(evtd)
 		ks2 =  keys(n3d)
-		@assert ks .== ks2
+		#println(ks)
+		#println(ks2)
+		@assert all(ks .== ks2) == true 
 
 		for k in ks
 			push!(n3d[k],evtd[k])
