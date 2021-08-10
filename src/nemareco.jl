@@ -344,7 +344,7 @@ end
 					  dconf    ::DetConf,
 		              file_i   ::Integer=1,
 					  file_l   ::Integer=1,
-					  phot     ::Bool=true,
+					  phot     ::Bool=true
 					  lor_algo ::Function=lor_maxq)
 
 Return the evtdf DataFrame
