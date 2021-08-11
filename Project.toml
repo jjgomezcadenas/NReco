@@ -22,6 +22,7 @@ StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [compat]
+Clustering = "0.14"
 HDF5 = "0.15"
 Unitful = "1"
 StatsModels = "0.6"
