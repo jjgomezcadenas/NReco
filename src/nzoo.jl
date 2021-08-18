@@ -1,8 +1,32 @@
 using DataFrames
 using ATools
 
+
+function rhits(event::Integer, ecut::Number, pde::Number,
+	Qdf::DataFrame, sxyzdf::DataFrame)
+
+	# select the event
+	qdf = select_by_column_value(Qdf, "event_id", event)
+	# multiply vector of charges by PDE and add column to the DF
+	Q = Float32.(qdf.charge * pde)
+	qdf[!,"Q"] = Q
+	# Select SiPMs with charge (q x PDE) about ecut
+	qdfQ   = qdf[qdf.Q.>ecut,:]
+	return sipm_xyzq(qdfQ, sxyzdf)
+end
+
+
+function sipm_xyzq(qdf::DataFrame, sxyz::DataFrame)
+	sids = qdf.sensor_id
+	pos = sipm_pos.((sxyz,),sids)
+	x = [p[1] for p in pos]
+	y = [p[2] for p in pos]
+	z = [p[3] for p in pos]
+	return DataFrame(x=x,y=y,z=z,q=qdf.Q)
+end
+
 function recoevent!(event      ::Integer,
-				   dc         ::DetConf,
+				   dc          ::DetConf,
 				   sensor_xyz  ::DataFrame,
 				   waveform    ::DataFrame,
 				   n3d         ::Dict)
@@ -10,7 +34,9 @@ function recoevent!(event      ::Integer,
 	n3d["total"] = n3d["total"] + 1
 
 	#hit dataframe
-	hitdf = recohits(event,sensor_xyz, waveform, dc.ecut, dc.pde, dc.sigma_tof)
+	hitdf = rhits(event, dc.ecut, dc.pde, waveform, sensor_xyz) 
+	
+	#recohits(event,sensor_xyz, waveform, dc.ecut, dc.pde, dc.sigma_tof)
 
 	if hitdf === nothing
 		n3d["empty"] = n3d["empty"] + 1
@@ -78,8 +104,8 @@ function zoo(files    ::Vector{String},
 			if ievt%100 == 0
 				println("reading event ", ievt, "event id =", event)
 			end
-			
-			recoevent!(event, dconf, pdf.sensor_xyz, pdf.waveform, n3d)
+
+			recoevent!(event, dconf, pdf.sensor_xyz, pdf.total_charge, n3d)
     	end
 	end
 	n3df = DataFrame(n3d)
