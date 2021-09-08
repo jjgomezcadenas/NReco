@@ -24,7 +24,6 @@ function makenema(args)
 
 	lorf    = args["loralgo"]
 	detconf = args["detconf"]
-	phot    = args["phot"]
 	dr      = args["dir"]
 	outd    = args["odir"]
 	outf    = args["ofile"]
@@ -94,14 +93,13 @@ function makenema(args)
 
 	println("makenema configuration")
 	println("detector configuration", dconf)
-	println(" photoelectric only  = $phot")
 	println(" lor_algo  = $lorf")
 
 	println("number of files in data dir = $(length(files))")
 	println("reading = $(file_l - file_i + 1) files")
 	println("output file  = $output")
 
-	n3df = NReco.nemareco(files, dconf, file_i, file_l, phot, lor_algo)
+	n3df = NReco.nemareco(files, dconf, file_i, file_l, lor_algo)
 
 	CSV.write(output, n3df)
 end
@@ -145,9 +143,9 @@ function parse_commandline()
 			help = "maximum charge (negative to set by detconf)"
 			arg_type = Float64
 			default = -1.0
-		"--phot", "-p"
-			help = "Select photoelectric if 1"
-			action = :store_true
+		#"--phot", "-p"
+		#	help = "Select photoelectric if 1"
+		#	action = :store_true
     end
 
     return parse_args(s)
