@@ -379,22 +379,22 @@ function nemareco(files    ::Vector{String},
 
 	# define data dictionary
 
-	n3d = Dict("phot1"=>[false], "phot2"=>[false],
-			   "nsipm1"=>[0],"nsipm2"=>[0],
-			   "q1" =>[0.0f0],   "q2" =>[0.0f0],
-	           "r1"  =>[0.0f0],  "r2"  =>[0.0f0],
-			   "phistd1"=>[0.0f0],  "zstd1"=>[0.0f0],
-			   "phistd2"=>[0.0f0],  "zstd2"=>[0.0f0],
-			   "xs"=>[0.0f0], "ys"=>[0.0f0], "zs"=>[0.0f0],
-		       "ux"=>[0.0f0], "uy"=>[0.0f0], "uz"=>[0.0f0],
-	           "xt1"=>[0.0f0], "yt1"=>[0.0f0], "zt1"=>[0.0f0],"t1"=>[0.0f0],
-		       "xt2"=>[0.0f0], "yt2"=>[0.0f0], "zt2"=>[0.0f0], "t2"=>[0.0f0],
-               "x1"=>[0.0f0],   "y1"=>[0.0f0], "z1"=>[0.0f0],
-               "x2"=>[0.0f0],   "y2"=>[0.0f0], "z2"=>[0.0f0],
-			   "xr1"=>[0.0f0], "yr1"=>[0.0f0], "zr1"=>[0.0f0], "tr1"=>[0.0f0],
-               "xr2"=>[0.0f0], "yr2"=>[0.0f0], "zr2"=>[0.0f0], "tr2"=>[0.0f0],
-			   "xb1"=>[0.0f0], "yb1"=>[0.0f0], "zb1"=>[0.0f0], "ta1"=>[0.0f0],
-			   "xb2"=>[0.0f0], "yb2"=>[0.0f0], "zb2"=>[0.0f0], "ta2"=>[0.0f0])
+	n3d = Dict("phot1"=>Bool[], "phot2"=>Bool[],
+			   "nsipm1"=>Int64[],"nsipm2"=>Int64[],
+			   "q1" =>Float32[],   "q2" =>Float32[],
+	           "r1"  =>Float32[],  "r2"  =>Float32[],
+			   "phistd1"=>Float32[],  "zstd1"=>Float32[],
+			   "phistd2"=>Float32[],  "zstd2"=>Float32[],
+			   "xs"=>Float32[], "ys"=>Float32[], "zs"=>Float32[],
+		       "ux"=>Float32[], "uy"=>Float32[], "uz"=>Float32[],
+	           "xt1"=>Float32[], "yt1"=>Float32[], "zt1"=>Float32[],"t1"=>Float32[],
+		       "xt2"=>Float32[], "yt2"=>Float32[], "zt2"=>Float32[], "t2"=>Float32[],
+               "x1"=>Float32[],   "y1"=>Float32[], "z1"=>Float32[],
+               "x2"=>Float32[],   "y2"=>Float32[], "z2"=>Float32[],
+			   "xr1"=>Float32[], "yr1"=>Float32[], "zr1"=>Float32[], "tr1"=>Float32[],
+               "xr2"=>Float32[], "yr2"=>Float32[], "zr2"=>Float32[], "tr2"=>Float32[],
+			   "xb1"=>Float32[], "yb1"=>Float32[], "zb1"=>Float32[], "ta1"=>Float32[],
+			   "xb2"=>Float32[], "yb2"=>Float32[], "zb2"=>Float32[], "ta2"=>Float32[])
 
 	# read one file to compute the radius of sipm
 	#pdf = read_abc(files[1])
@@ -421,5 +421,4 @@ function nemareco(files    ::Vector{String},
     	end
 	end
 	n3df = DataFrame(n3d)
-	return n3df[2:end,:]
 end
