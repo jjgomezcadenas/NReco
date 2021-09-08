@@ -2,6 +2,7 @@ using DataFrames
 using StatsModels
 using Clustering
 using Statistics
+using LinearAlgebra
 using ATools
 
 # Selection
