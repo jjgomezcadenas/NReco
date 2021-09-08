@@ -108,7 +108,7 @@ end
 """
 	true_xyz(b1::Hit, b2::Hit, df1::DataFrame, df2::DataFrame)
 
-Return the sorted distance between baricenter and true 
+Return the sorted distance between baricenter and true
 """
 function true_xyz(b1::Hit, df1::DataFrame, df2::DataFrame)
 	# distance between baricenter and true
@@ -135,7 +135,7 @@ end
 	waveform    		 ::DataFrame,
 	lor_algo    		 ::Function)
 
-Return a dictionary with the variables characterising the event. 
+Return a dictionary with the variables characterising the event.
 """
 function recovent(event      ::Integer,
 				 dc          ::DetConf,
@@ -155,12 +155,12 @@ function recovent(event      ::Integer,
 
 	if hitdf === nothing
 	@warn "Warning, hidtf evaluates to nothing for event = $event"
-	return nothing 
+	return nothing
 	end
 
 	if nrow(hitdf) < 2
 	@warn "Warning, hidtf is <2 for event = $event"
-	return nothing 
+	return nothing
 	end
 
 	@info " hit dataframe: size = $size(hitdf)"
@@ -180,11 +180,11 @@ function recovent(event      ::Integer,
 	@info " total charge: q1 = $q1, q2 = $q2"
 	if q1 < dc.qmin || q1 > dc.qmax
 	@info "Warning, q1 is $q1 for event $event"
-	return nothing 
+	return nothing
 	end
 	if q2 < dc.qmin || q2 > dc.qmax
 	@info "Warning, q2 is $q2 for event $event"
-	return nothing 
+	return nothing
 	end
 
 	# Compute phistd and zstd1
@@ -323,19 +323,21 @@ function nema_dict!(event       ::Integer,
 
 
 	result = recovent(event, dc, df1, df2,primaries, sensor_xyz, waveform, lor_algo)
-	
+
 	if result !== nothing
-		hitdf1, hitdf2, evtd = result 
+		hitdf1, hitdf2, evtd = result
 		ks =  keys(evtd)
-		ks2 =  keys(n3d)
+		#ks2 =  keys(n3d)
 		#println(ks)
 		#println(ks2)
-		@assert all(ks .== ks2) == true 
+		#@assert all(ks .== ks2) == true
+		push!(n3d["phot1"], df1.process_id[1] == 1)
+		push!(n3d["phot2"], df2.process_id[1] == 1)
 
 		for k in ks
 			push!(n3d[k],evtd[k])
 		end
-	end	
+	end
 end
 
 
@@ -373,12 +375,12 @@ function nemareco(files    ::Vector{String},
 				  dconf    ::DetConf,
 	              file_i   ::Integer=1,
 				  file_l   ::Integer=1,
-				  phot     ::Bool=true,
 				  lor_algo ::Function=lor_maxq)
 
 	# define data dictionary
 
-	n3d = Dict("nsipm1"=>[0],"nsipm2"=>[0],
+	n3d = Dict("phot1"=>[false], "phot2"=>[false],
+			   "nsipm1"=>[0],"nsipm2"=>[0],
 			   "q1" =>[0.0f0],   "q2" =>[0.0f0],
 	           "r1"  =>[0.0f0],  "r2"  =>[0.0f0],
 			   "phistd1"=>[0.0f0],  "zstd1"=>[0.0f0],
@@ -411,18 +413,10 @@ function nemareco(files    ::Vector{String},
 			if any(vdf.track_id .== 1) && any(vdf.track_id .== 2)
 				df1 = select_by_column_value(vdf, "track_id", 1)
             	df2 = select_by_column_value(vdf, "track_id", 2)
-				if phot == true
-            		if df1.process_id[1] == 1 && df2.process_id[1] == 1
-						nema_dict!(event, dconf, df1, df2,
-						               pdf.primaries, pdf.sensor_xyz, pdf.waveform,
-									   lor_algo, n3d)
 
-        			end
-				else
-					nema_dict!(event, dconf, df1, df2,
-					               pdf.primaries, pdf.sensor_xyz, pdf.waveform,
-								   lor_algo, n3d)
-				end
+				nema_dict!(event, dconf, df1, df2,
+					       pdf.primaries, pdf.sensor_xyz, pdf.waveform,
+						   lor_algo, n3d)
 			end
     	end
 	end
