@@ -1,5 +1,6 @@
 using DataFrames
 using Distributions
+using StatsBase
 using ATools
 
 
@@ -189,8 +190,10 @@ function recovent(event      ::Integer,
 	# Compute phistd and zstd1
 	phistd1 = phistd(hq1df)
 	zstd1   = xyzstd(hq1df,"z")
+	n3d["corrzphi1"] = cor(hcat(hq1df.z, fphi(hq1df)), Weights(hq1df.q))[1,2]
 	phistd2 = phistd(hq2df)
 	zstd2   = xyzstd(hq2df,"z")
+	n3d["corrzphi2"] = cor(hcat(hq2df.z, fphi(hq2df)), Weights(hq2df.q))[1,2]
 	@info " phistd1 = $phistd1, zstd1 = $zstd1"
 	@info " phistd2 = $phistd2, zstd2 = $zstd2"
 
@@ -382,8 +385,8 @@ function nemareco(files    ::Vector{String},
 			   "nsipm1"=>Int64[],"nsipm2"=>Int64[],
 			   "q1" =>Float32[],   "q2" =>Float32[],
 	           "r1"  =>Float32[],  "r2"  =>Float32[],
-			   "phistd1"=>Float32[],  "zstd1"=>Float32[],
-			   "phistd2"=>Float32[],  "zstd2"=>Float32[],
+			   "phistd1"=>Float32[],  "zstd1"=>Float32[], "corrzphi1"=>Float32[],
+			   "phistd2"=>Float32[],  "zstd2"=>Float32[], "corrzphi2"=>Float32[],
 			   "xs"=>Float32[], "ys"=>Float32[], "zs"=>Float32[],
 		       "ux"=>Float32[], "uy"=>Float32[], "uz"=>Float32[],
 	           "xt1"=>Float32[], "yt1"=>Float32[], "zt1"=>Float32[],"t1"=>Float32[],
