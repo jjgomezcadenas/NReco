@@ -37,8 +37,10 @@ end
 end
 
 @testset "nemareco" begin
-    exp_keys = ["phot1", "phot2", "nsipm1", "nsipm2", "q1",   "q2",
-	            "r1",  "r2", "phistd1", "zstd1", "corrzphi1", "phistd2",  "zstd2", "corrzphi2",
+    exp_keys = ["phot1", "phot2", "nsipm1", "nsipm2", "q1", "q2",
+	            "r1",  "r2",
+                "phistd1", "zstd1", "widz1", "widphi1", "corrzphi1",
+                "phistd2", "zstd2", "widz2", "widphi2", "corrzphi2",
 			    "xs", "ys", "zs", "ux", "uy", "uz", "xt1", "yt1", "zt1",
                 "t1", "xt2", "yt2", "zt2", "t2", "x1", "y1", "z1",
                 "x2", "y2", "z2", "xr1", "yr1", "zr1", "tr1",
