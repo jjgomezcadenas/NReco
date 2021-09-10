@@ -75,7 +75,7 @@ function makenema(args)
 	else                # by default, 40 ps jitter  & 30 ps electronics = 50 ps, harder cuts
 		pde  = 0.3f0
 		sigma_tof = 0.050f0
-		ecut = 2.0f0           # best performance for small  ecut
+		ecut = 1.0f0           # best performance for small  ecut
 		qmin = 100.0f0
 		qmax = 5000.0f0
 		ntof =7                 # increase sipms for average
