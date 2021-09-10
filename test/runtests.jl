@@ -3,7 +3,10 @@ using ATools
 using Test
 using Distributions
 using Statistics
+using Logging
 #using StatsModels
+# Lower function verbosity
+logger = global_logger(SimpleLogger(stdout, Logging.Warn))
 
 fname = "../data/testdata/nema3-window-1m-LXe-20mm-1-999.h5"
 pdf   = NReco.read_abc(fname)
