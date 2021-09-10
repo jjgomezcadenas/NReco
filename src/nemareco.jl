@@ -1,6 +1,7 @@
 using DataFrames
 #using Glob
 using Distributions
+using StatsBase
 using ATools
 
 
@@ -108,7 +109,7 @@ end
 """
 	true_xyz(b1::Hit, b2::Hit, df1::DataFrame, df2::DataFrame)
 
-Return the sorted distance between baricenter and true 
+Return the sorted distance between baricenter and true
 """
 function true_xyz(b1::Hit, df1::DataFrame, df2::DataFrame)
 	# distance between baricenter and true
@@ -135,7 +136,7 @@ end
 	waveform    		 ::DataFrame,
 	lor_algo    		 ::Function)
 
-Return a dictionary with the variables characterising the event. 
+Return a dictionary with the variables characterising the event.
 """
 function recovent(event      ::Integer,
 				 dc          ::DetConf,
@@ -155,12 +156,12 @@ function recovent(event      ::Integer,
 
 	if hitdf === nothing
 	@warn "Warning, hidtf evaluates to nothing for event = $event"
-	return nothing 
+	return nothing
 	end
 
 	if nrow(hitdf) < 2
 	@warn "Warning, hidtf is <2 for event = $event"
-	return nothing 
+	return nothing
 	end
 
 	@info " hit dataframe: size = $size(hitdf)"
@@ -180,18 +181,26 @@ function recovent(event      ::Integer,
 	@info " total charge: q1 = $q1, q2 = $q2"
 	if q1 < dc.qmin || q1 > dc.qmax
 	@info "Warning, q1 is $q1 for event $event"
-	return nothing 
+	return nothing
 	end
 	if q2 < dc.qmin || q2 > dc.qmax
 	@info "Warning, q2 is $q2 for event $event"
-	return nothing 
+	return nothing
 	end
 
 	# Compute phistd and zstd1
-	phistd1 = phistd(hq1df)
-	zstd1   = xyzstd(hq1df,"z")
+	phistd1          = phistd(hq1df)
+	zstd1            = xyzstd(hq1df,"z")
+	n3d["widz1"]     = maximum(hq1df.z) - minimum(hq1df.z)
+	phi_values       = fphi(hq1df)
+	n3d["widphi1"]   = maximum(phi_values) - minimum(phi_values)
+	n3d["corrzphi1"] = cor(hcat(hq1df.z, phi_values), Weights(hq1df.q))[1,2]
 	phistd2 = phistd(hq2df)
 	zstd2   = xyzstd(hq2df,"z")
+	n3d["widz2"]     = maximum(hq2df.z) - minimum(hq2df.z)
+	phi_values       = fphi(hq2df)
+	n3d["widphi2"]   = maximum(phi_values) - minimum(phi_values)
+	n3d["corrzphi2"] = cor(hcat(hq2df.z, phi_values), Weights(hq2df.q))[1,2]
 	@info " phistd1 = $phistd1, zstd1 = $zstd1"
 	@info " phistd2 = $phistd2, zstd2 = $zstd2"
 
@@ -323,19 +332,21 @@ function nema_dict!(event       ::Integer,
 
 
 	result = recovent(event, dc, df1, df2,primaries, sensor_xyz, waveform, lor_algo)
-	
+
 	if result !== nothing
-		hitdf1, hitdf2, evtd = result 
+		hitdf1, hitdf2, evtd = result
 		ks =  keys(evtd)
-		ks2 =  keys(n3d)
+		#ks2 =  keys(n3d)
 		#println(ks)
 		#println(ks2)
-		@assert all(ks .== ks2) == true 
+		#@assert all(ks .== ks2) == true
+		push!(n3d["phot1"], df1.process_id[1] == 1)
+		push!(n3d["phot2"], df2.process_id[1] == 1)
 
 		for k in ks
 			push!(n3d[k],evtd[k])
 		end
-	end	
+	end
 end
 
 
@@ -373,26 +384,28 @@ function nemareco(files    ::Vector{String},
 				  dconf    ::DetConf,
 	              file_i   ::Integer=1,
 				  file_l   ::Integer=1,
-				  phot     ::Bool=true,
 				  lor_algo ::Function=lor_maxq)
 
 	# define data dictionary
 
-	n3d = Dict("nsipm1"=>[0],"nsipm2"=>[0],
-			   "q1" =>[0.0f0],   "q2" =>[0.0f0],
-	           "r1"  =>[0.0f0],  "r2"  =>[0.0f0],
-			   "phistd1"=>[0.0f0],  "zstd1"=>[0.0f0],
-			   "phistd2"=>[0.0f0],  "zstd2"=>[0.0f0],
-			   "xs"=>[0.0f0], "ys"=>[0.0f0], "zs"=>[0.0f0],
-		       "ux"=>[0.0f0], "uy"=>[0.0f0], "uz"=>[0.0f0],
-	           "xt1"=>[0.0f0], "yt1"=>[0.0f0], "zt1"=>[0.0f0],"t1"=>[0.0f0],
-		       "xt2"=>[0.0f0], "yt2"=>[0.0f0], "zt2"=>[0.0f0], "t2"=>[0.0f0],
-               "x1"=>[0.0f0],   "y1"=>[0.0f0], "z1"=>[0.0f0],
-               "x2"=>[0.0f0],   "y2"=>[0.0f0], "z2"=>[0.0f0],
-			   "xr1"=>[0.0f0], "yr1"=>[0.0f0], "zr1"=>[0.0f0], "tr1"=>[0.0f0],
-               "xr2"=>[0.0f0], "yr2"=>[0.0f0], "zr2"=>[0.0f0], "tr2"=>[0.0f0],
-			   "xb1"=>[0.0f0], "yb1"=>[0.0f0], "zb1"=>[0.0f0], "ta1"=>[0.0f0],
-			   "xb2"=>[0.0f0], "yb2"=>[0.0f0], "zb2"=>[0.0f0], "ta2"=>[0.0f0])
+	n3d = Dict("phot1"=>Bool[], "phot2"=>Bool[],
+			   "nsipm1"=>Int64[],"nsipm2"=>Int64[],
+			   "q1" =>Float32[],   "q2" =>Float32[],
+	           "r1"  =>Float32[],  "r2"  =>Float32[],
+			   "phistd1"=>Float32[],  "zstd1"=>Float32[],
+			   "widz1"=>Float32[], "widphi1"=>Float32[], "corrzphi1"=>Float32[],
+			   "phistd2"=>Float32[], "zstd2"=>Float32[],
+			   "widz2"=>Float32[], "widphi2"=>Float32[], "corrzphi2"=>Float32[],
+			   "xs"=>Float32[], "ys"=>Float32[], "zs"=>Float32[],
+		       "ux"=>Float32[], "uy"=>Float32[], "uz"=>Float32[],
+	           "xt1"=>Float32[], "yt1"=>Float32[], "zt1"=>Float32[],"t1"=>Float32[],
+		       "xt2"=>Float32[], "yt2"=>Float32[], "zt2"=>Float32[], "t2"=>Float32[],
+               "x1"=>Float32[],   "y1"=>Float32[], "z1"=>Float32[],
+               "x2"=>Float32[],   "y2"=>Float32[], "z2"=>Float32[],
+			   "xr1"=>Float32[], "yr1"=>Float32[], "zr1"=>Float32[], "tr1"=>Float32[],
+               "xr2"=>Float32[], "yr2"=>Float32[], "zr2"=>Float32[], "tr2"=>Float32[],
+			   "xb1"=>Float32[], "yb1"=>Float32[], "zb1"=>Float32[], "ta1"=>Float32[],
+			   "xb2"=>Float32[], "yb2"=>Float32[], "zb2"=>Float32[], "ta2"=>Float32[])
 
 	# read one file to compute the radius of sipm
 	#pdf = read_abc(files[1])
@@ -411,21 +424,12 @@ function nemareco(files    ::Vector{String},
 			if any(vdf.track_id .== 1) && any(vdf.track_id .== 2)
 				df1 = select_by_column_value(vdf, "track_id", 1)
             	df2 = select_by_column_value(vdf, "track_id", 2)
-				if phot == true
-            		if df1.process_id[1] == 1 && df2.process_id[1] == 1
-						nema_dict!(event, dconf, df1, df2,
-						               pdf.primaries, pdf.sensor_xyz, pdf.waveform,
-									   lor_algo, n3d)
 
-        			end
-				else
-					nema_dict!(event, dconf, df1, df2,
-					               pdf.primaries, pdf.sensor_xyz, pdf.waveform,
-								   lor_algo, n3d)
-				end
+				nema_dict!(event, dconf, df1, df2,
+					       pdf.primaries, pdf.sensor_xyz, pdf.waveform,
+						   lor_algo, n3d)
 			end
     	end
 	end
 	n3df = DataFrame(n3d)
-	return n3df[2:end,:]
 end

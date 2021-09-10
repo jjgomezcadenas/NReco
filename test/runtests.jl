@@ -3,12 +3,17 @@ using ATools
 using Test
 using Distributions
 using Statistics
+using Logging
 #using StatsModels
+# Lower function verbosity
+logger = global_logger(SimpleLogger(stdout, Logging.Warn))
 
-pdf  = NReco.read_abc("../data/testdata/nema3-window-1m-LXe-20mm-1-999.h5")
-sxyz = pdf.sensor_xyz
-wfm  = pdf.waveform
-vdf  = pdf.vertices
+fname = "../data/testdata/nema3-window-1m-LXe-20mm-1-999.h5"
+pdf   = NReco.read_abc(fname)
+dconf = NReco.DetConf(0.3f0, 0.05f0, 2.0f0, 100.0f0, 5000.0f0, 7)
+sxyz  = pdf.sensor_xyz
+wfm   = pdf.waveform
+vdf   = pdf.vertices
 
 
 
@@ -32,4 +37,23 @@ end
 
 @testset "recof" begin
     @test all(NReco.primary_in_lxe(vdf).parent_id .== 0) == 1
+end
+
+@testset "nemareco" begin
+    exp_keys = ["phot1", "phot2", "nsipm1", "nsipm2", "q1", "q2",
+	            "r1",  "r2",
+                "phistd1", "zstd1", "widz1", "widphi1", "corrzphi1",
+                "phistd2", "zstd2", "widz2", "widphi2", "corrzphi2",
+			    "xs", "ys", "zs", "ux", "uy", "uz", "xt1", "yt1", "zt1",
+                "t1", "xt2", "yt2", "zt2", "t2", "x1", "y1", "z1",
+                "x2", "y2", "z2", "xr1", "yr1", "zr1", "tr1",
+                "xr2", "yr2", "zr2", "tr2", "xb1", "yb1", "zb1", "ta1",
+			    "xb2", "yb2", "zb2", "ta2"]
+    result = NReco.nemareco([fname], dconf)
+    @test length(names(result)) == length(exp_keys)
+    @test all(in(exp_keys).(names(result)))
+    corrzphi1 = result[.!isnan.(result.corrzphi1), "corrzphi1"]
+    corrzphi2 = result[.!isnan.(result.corrzphi2), "corrzphi1"]
+    @test all((corrzphi1 .<= 1.0) .& (corrzphi1 .>= -1.0))
+    @test all((corrzphi2 .<= 1.0) .& (corrzphi2 .>= -1.0))
 end
