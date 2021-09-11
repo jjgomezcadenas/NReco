@@ -54,6 +54,8 @@ end
     @test all(in(exp_keys).(names(result)))
     corrzphi1 = result[.!isnan.(result.corrzphi1), "corrzphi1"]
     corrzphi2 = result[.!isnan.(result.corrzphi2), "corrzphi1"]
+
+    
     @test all((corrzphi1 .<= 1.0) .& (corrzphi1 .>= -1.0))
     @test all((corrzphi2 .<= 1.0) .& (corrzphi2 .>= -1.0))
 end
