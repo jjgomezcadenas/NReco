@@ -52,8 +52,9 @@ end
     result = NReco.nemareco([fname], dconf)
     @test length(names(result)) == length(exp_keys)
     @test all(in(exp_keys).(names(result)))
-    corrzphi1 = result[.!isnan.(result.corrzphi1), "corrzphi1"]
-    corrzphi2 = result[.!isnan.(result.corrzphi2), "corrzphi1"]
+    filter_func = ismissing, isnothing, isnan
+    corrzphi1   = filter(c -> !any(f -> f(c), filter_func), result.corrzphi1)
+    corrzphi2   = filter(c -> !any(f -> f(c), filter_func), result.corrzphi2)
     @test all((corrzphi1 .<= 1.0) .& (corrzphi1 .>= -1.0))
     @test all((corrzphi2 .<= 1.0) .& (corrzphi2 .>= -1.0))
 end
