@@ -232,7 +232,7 @@ function nema_dict!(event       ::Integer,
 	result = recovent(event, dc, df1, df2,primaries, sensor_xyz, waveform, lor_algo)
 
 	if result !== nothing
-		hitdf1, hitdf2, evtd = result
+		_, _, evtd = result
 		ks =  keys(evtd)
 		#ks2 =  keys(n3d)
 		#println(ks)
@@ -314,16 +314,14 @@ function nemareco(files    ::Vector{String},
 		pdf = read_abc(file)            # read file
 		dfs = primary_in_lxe(pdf.vertices)       # primary photons in LXe
 
-		for event in unique(dfs.event_id)       #loop on events
-			#  event DF
-			vdf = select_by_column_value(dfs, "event_id", event)
+		for (event, vdf) in pairs(groupby(dfs, :event_id))
 
 			# two primary photons in LXe
 			if any(vdf.track_id .== 1) && any(vdf.track_id .== 2)
-				df1 = select_by_column_value(vdf, "track_id", 1)
-            	df2 = select_by_column_value(vdf, "track_id", 2)
+				df1 = vdf[vdf.track_id .== 1, :]
+            	df2 = vdf[vdf.track_id .== 2, :]
 
-				nema_dict!(event, dconf, df1, df2,
+				nema_dict!(event.event_id, dconf, df1, df2,
 					       pdf.primaries, pdf.sensor_xyz, pdf.waveform,
 						   lor_algo, n3d)
 			end
