@@ -36,18 +36,15 @@ end
 
 Return a dictionary with the variables characterising the event.
 """
-function recovent(event      ::Integer,
-				 dc          ::DetConf,
-				 df1         ::DataFrame,
-				 df2         ::DataFrame,
-				 primaries   ::DataFrame,
-				 sensor_xyz  ::DataFrame,
-				 waveform    ::DataFrame,
-				 lor_algo    ::Function)
+function recovent(event     ::Integer,
+				  dc        ::DetConf,
+				  df1       ::DataFrame,
+				  df2       ::DataFrame,
+				  primaries ::SubDataFrame,
+				  sensor_xyz::DataFrame,
+				  waveform  ::SubDataFrame,
+				  lor_algo  ::Function)
 	n3d = Dict()
-	# primaries
-	prim = select_by_column_value(primaries, "event_id", event)
-	@debug "Primaries in event:" prim
 
 		#hit dataframe
 	hitdf = recohits(event,sensor_xyz, waveform, dc.ecut, dc.pde, dc.sigma_tof)
@@ -218,15 +215,15 @@ end
 
 Fill the DataFrame for nema analysis
 """
-function nema_dict!(event       ::Integer,
-						dc          ::DetConf,
-						df1         ::DataFrame,
-						df2         ::DataFrame,
-						primaries   ::DataFrame,
-						sensor_xyz  ::DataFrame,
-						waveform    ::DataFrame,
-						lor_algo    ::Function,
-						n3d         ::Dict)
+function nema_dict!(event     ::Integer,
+					dc        ::DetConf,
+					df1       ::DataFrame,
+					df2       ::DataFrame,
+					primaries ::SubDataFrame,
+					sensor_xyz::DataFrame,
+					waveform  ::SubDataFrame,
+					lor_algo  ::Function,
+					n3d       ::Dict)
 
 
 	result = recovent(event, dc, df1, df2,primaries, sensor_xyz, waveform, lor_algo)
@@ -313,18 +310,19 @@ function nemareco(files    ::Vector{String},
 		println("reading file = ", file)
 		pdf = read_abc(file)            # read file
 		dfs = primary_in_lxe(pdf.vertices)       # primary photons in LXe
+		## We are interested in events with two primary photons in LXe
+		grp_dfs = filter(x -> any(x.track_id .== 1) && any(x.track_id .== 2),
+							groupby(dfs, :event_id))
+		primaries = groupby(pdf.primaries, :event_id)
+		waveforms = groupby(pdf.waveform , :event_id)
 
-		for (event, vdf) in pairs(groupby(dfs, :event_id))
+		for (event, vdf) in pairs(grp_dfs)
+			df1 = vdf[vdf.track_id .== 1, :]
+            df2 = vdf[vdf.track_id .== 2, :]
 
-			# two primary photons in LXe
-			if any(vdf.track_id .== 1) && any(vdf.track_id .== 2)
-				df1 = vdf[vdf.track_id .== 1, :]
-            	df2 = vdf[vdf.track_id .== 2, :]
-
-				nema_dict!(event.event_id, dconf, df1, df2,
-					       pdf.primaries, pdf.sensor_xyz, pdf.waveform,
-						   lor_algo, n3d)
-			end
+			nema_dict!(event.event_id, dconf, df1, df2,
+					   primaries[values(event)], pdf.sensor_xyz,
+					   waveforms[values(event)], lor_algo, n3d)
     	end
 	end
 	n3df = DataFrame(n3d)
