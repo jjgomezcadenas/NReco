@@ -33,7 +33,7 @@ function makezoo(args)
     pde  = 0.3f0
     sigma_tof = 0.050f0
     ecut = 2.0f0           # best performance for small  ecut
-    qmin = 1500.0f0
+    qmin = 1900.0f0
     qmax = 2200.0f0
     ntof =7                 # increase sipms for average
 	
