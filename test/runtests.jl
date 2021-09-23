@@ -30,8 +30,8 @@ vdf   = pdf.vertices
     @test mean(NReco.select_by_column_value_interval(wevt, "time", 5.0, 10.0).time) >5.0
     @test mean(NReco.select_by_column_value_interval(wevt, "time", 5.0, 10.0).time) <10.0
 
-    mx, imx = NReco.find_max_xy(wevt, "sensor_id", "time")
-    m, i    = findmax(wevt.time)
+    _, imx, _ = NReco.find_max_xy(wevt, "sensor_id", "time")
+    m, i      = findmax(wevt.time)
     @test wevt.sensor_id[i] == imx
 end
 

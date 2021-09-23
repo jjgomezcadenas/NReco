@@ -52,10 +52,8 @@ Return the coordinates of the SiPM with maximum charge
 
 """
 function find_xyz_sipm_qmax(hitdf::DataFrame)
-	qxmax, xmax = find_max_xy(hitdf,"x", "q")
-	qymax, ymax = find_max_xy(hitdf,"y", "q")
-	qzmax, zmax = find_max_xy(hitdf,"z", "q")
-	return Hit(xmax,ymax,zmax,qxmax)
+	indx, xmax, qxmax = find_max_xy(hitdf, "x", "q")
+	return Hit(xmax, hitdf.y[indx], hitdf.z[indx], qxmax)
 end
 
 
