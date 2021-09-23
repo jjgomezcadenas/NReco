@@ -123,8 +123,6 @@ function lor_kmeans(hitdf::DataFrame)
 	Mhits = get_hits_as_matrix(hitdf)  # take the underlying matrix
 	kr = kmeans(Mhits, 2)              # apply kmeans
 	ka = assignments(kr) # get the assignments of points to clusters
-	kc = counts(kr) # get the cluster sizes
-	#rk = kr.centers # get the cluster centers
 
 	hq2df, hq1df = ksipmsel(hitdf, ka)   # select using kmeans list
 	b1 = baricenter(hq1df)     # baricenters
