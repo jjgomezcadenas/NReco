@@ -15,13 +15,13 @@ function true_xyz(b1::Hit, df1::DataFrame, df2::DataFrame)
 	d2 = dxyz([b1.x, b1.y, b1.z], [df2.x[1], df2.y[1], df2.z[1]])
 
 	if d2 < d1
-			xt2 = [df1.x[1], df1.y[1], df1.z[1]]
-			xt1 = [df2.x[1], df2.y[1], df2.z[1]]
-		else
-			xt1 = [df1.x[1], df1.y[1], df1.z[1]]
-			xt2 = [df2.x[1], df2.y[1], df2.z[1]]
-		end
-		return xt1, xt2
+		xt2 = [df1.x[1], df1.y[1], df1.z[1]]
+		xt1 = [df2.x[1], df2.y[1], df2.z[1]]
+	else
+		xt1 = [df1.x[1], df1.y[1], df1.z[1]]
+		xt2 = [df2.x[1], df2.y[1], df2.z[1]]
+	end
+	return xt1, xt2
 end
 
 """
@@ -29,9 +29,9 @@ end
 	dc          		 ::DetConf,
 	df1         		 ::DataFrame,
 	df2         		 ::DataFrame,
-	primaries   		 ::DataFrame,
+	primaries   		 ::SubDataFrame,
 	sensor_xyz  		 ::DataFrame,
-	waveform    		 ::DataFrame,
+	waveform    		 ::SubDataFrame,
 	lor_algo    		 ::Function)
 
 Return a dictionary with the variables characterising the event.
@@ -46,7 +46,18 @@ function recovent(event     ::Integer,
 				  lor_algo  ::Function)
 	n3d = Dict()
 
-		#hit dataframe
+	n3d[:phot1] =  df1.process_id[1] == 1
+	n3d[:phot2] =  df2.process_id[1] == 1
+
+	# Primary particle origins
+	n3d[:xs] = primaries.x[1]
+	n3d[:ys] = primaries.y[1]
+	n3d[:zs] = primaries.z[1]
+	n3d[:ux] = primaries.vx[1]
+	n3d[:uy] = primaries.vy[1]
+	n3d[:uz] = primaries.vz[1]
+
+	# hit dataframe
 	hitdf = recohits(event,sensor_xyz, waveform, dc.ecut, dc.pde, dc.sigma_tof)
 
 	if hitdf === nothing
@@ -65,6 +76,16 @@ function recovent(event     ::Integer,
 	# reconstruct (x,y) : barycenter
 	b1, b2, hq1df, hq2df = lor_algo(hitdf)
 
+	n3d[:xr1]    = b1.x
+	n3d[:yr1]    = b1.y
+	n3d[:zr1]    = b1.z
+	n3d[:nsipm1] = nrow(hq1df)
+
+	n3d[:xr2]    = b2.x
+	n3d[:yr2]    = b2.y
+	n3d[:zr2]    = b2.z
+	n3d[:nsipm2] = nrow(hq1df)
+
 	@info " barycenters" b1 b2
 
 	# total charge
@@ -81,47 +102,52 @@ function recovent(event     ::Integer,
 	return nothing
 	end
 
-	# Compute phistd and zstd1
-	int1_weights    = FrequencyWeights(hq1df.q)
-	phi_values      = fphi(hq1df)
-	n3d[:phistd1]   = std(phi_values, int1_weights, corrected=true)#phistd(hq1df)
-	n3d[:zstd1]     = std(hq1df.z   , int1_weights, corrected=true)#xyzstd(hq1df,"z")
-	n3d[:widz1]     = maximum(hq1df.z) - minimum(hq1df.z)
-	n3d[:widphi1]   = maximum(phi_values) - minimum(phi_values)
-	n3d[:corrzphi1] = cor(hcat(hq1df.z, phi_values), int1_weights)[1,2]
-	int2_weights    = FrequencyWeights(hq2df.q)
-	phi_values      = fphi(hq2df)
-	n3d[:phistd2]   = std(phi_values, int2_weights, corrected=true)#phistd(hq2df)
-	n3d[:zstd2]     = std(hq2df.z   , int2_weights, corrected=true)#xyzstd(hq2df,"z")
-	n3d[:widz2]     = maximum(hq2df.z) - minimum(hq2df.z)
-	n3d[:widphi2]   = maximum(phi_values) - minimum(phi_values)
-	n3d[:corrzphi2] = cor(hcat(hq2df.z, phi_values), int2_weights)[1,2]
-	@info " phistd1 = $(n3d[:phistd1]), zstd1 = $(n3d[:zstd1])"
-	@info " phistd2 = $(n3d[:phistd2]), zstd2 = $(n3d[:zstd2])"
-
 	# find true position (and correlate with barycenter)
 	xt1, xt2 = true_xyz(b1, df1, df2)
+
+	n3d[:xt1] = xt1[1]
+	n3d[:yt1] = xt1[2]
+	n3d[:zt1] = xt1[3]
+	n3d[:t1]  = minimum(hq1df.tmin)
+	n3d[:tr1] = minimum(hq1df.trmin)
+
+	n3d[:xt2] = xt2[1]
+	n3d[:yt2] = xt2[2]
+	n3d[:zt2] = xt2[3]
+	n3d[:t2]  = minimum(hq2df.tmin)
+	n3d[:tr2] = minimum(hq2df.trmin)
+
 	# find r1 and r2 (from True info)
 	n3d[:r1] = rxy(xt1[1], xt1[2])
 	n3d[:r2] = rxy(xt2[1], xt2[2])
 	@info " True position in hemisphere 1" xt1
 	@info " True position in hemisphere 1" xt2
 
+	# Compute phistd and zstd1
+	int1_weights    = FrequencyWeights(hq1df.q)
+	phi_values      = fphi(hq1df)
+	n3d[:phistd1]   = std(phi_values, int1_weights, corrected=true)
+	n3d[:zstd1]     = std(hq1df.z   , int1_weights, corrected=true)
+	n3d[:widz1]     = maximum(hq1df.z) - minimum(hq1df.z)
+	n3d[:widphi1]   = maximum(phi_values) - minimum(phi_values)
+	n3d[:corrzphi1] = cor(hcat(hq1df.z, phi_values), int1_weights)[1,2]
+	int2_weights    = FrequencyWeights(hq2df.q)
+	phi_values      = fphi(hq2df)
+	n3d[:phistd2]   = std(phi_values, int2_weights, corrected=true)
+	n3d[:zstd2]     = std(hq2df.z   , int2_weights, corrected=true)
+	n3d[:widz2]     = maximum(hq2df.z) - minimum(hq2df.z)
+	n3d[:widphi2]   = maximum(phi_values) - minimum(phi_values)
+	n3d[:corrzphi2] = cor(hcat(hq2df.z, phi_values), int2_weights)[1,2]
+	@info " phistd1 = $(n3d[:phistd1]), zstd1 = $(n3d[:zstd1])"
+	@info " phistd2 = $(n3d[:phistd2]), zstd2 = $(n3d[:zstd2])"
+
 	# New (x,y) positions estimated from r1, r2
 	n3d[:x1], n3d[:y1], n3d[:z1] = radial_correction(b1, n3d[:r1])
 	n3d[:x2], n3d[:y2], n3d[:z2] = radial_correction(b2, n3d[:r2])
-	#x1, y1, z1  = radial_correction(b1, r1)
-	#x2, y2, z2  = radial_correction(b2, r2)
 
 	@info " New (x,y,z) positions estimated from r1, r2 & r1q, r2q"
 	@info " from r1:  x1 = $(n3d[:x1]), y1=$(n3d[:y1]), z1=$(n3d[:z1])"
 	@info " from r2:  x2 = $(n3d[:x2]), y1=$(n3d[:y2]), z1=$(n3d[:z2])"
-
-	# Find the sipm with the fastest time
-	n3d[:t1]  = minimum(hq1df.tmin)
-	n3d[:t2]  = minimum(hq2df.tmin)
-	n3d[:tr1] = minimum(hq1df.trmin)
-	n3d[:tr2] = minimum(hq2df.trmin)
 
 	ntof1 = min(dc.ntof, nrow(hq1df))
 	ntof2 = min(dc.ntof, nrow(hq2df))
@@ -140,65 +166,13 @@ function recovent(event     ::Integer,
 
 	ht1  = select_by_column_value(hq1df, "tmin", n3d[:t1])
 	ht2  = select_by_column_value(hq2df, "tmin", n3d[:t2])
-	htr1 = select_by_column_value(hq1df, "trmin", n3d[:tr1])
-	htr2 = select_by_column_value(hq2df, "trmin", n3d[:tr2])
 
-	n3d[:xs] = primaries.x[1]
-    n3d[:ys] = primaries.y[1]
-    n3d[:zs] = primaries.z[1]
-	n3d[:ux] = primaries.vx[1]
-	n3d[:uy] = primaries.vy[1]
-	n3d[:uz] = primaries.vz[1]
-
-    n3d[:xt1]=xt1[1]
-    n3d[:yt1]=xt1[2]
-    n3d[:zt1]=xt1[3]
-    #n3d[:t1]=t1
-
-    n3d[:xt2]=xt2[1]
-    n3d[:yt2]=xt2[2]
-    n3d[:zt2]=xt2[3]
-    #n3d[:t2]=t2
-
-    #n3d[:x1]=x1
-    #n3d[:y1]=y1
-    #n3d[:z1]=z1
-
-    #n3d[:x2]=x2
-    #n3d[:y2]=y2
-    #n3d[:z2]=z2
-
-    n3d[:xr1]=b1.x
-    n3d[:yr1]=b1.y
-    n3d[:zr1]=b1.z
-    #n3d[:tr1]=tr1
-
-    n3d[:xr2]=b2.x
-    n3d[:yr2]=b2.y
-    n3d[:zr2]=b2.z
-    #n3d[:tr2]=tr2
-
-    #n3d[:ta1]=ta1
-    #n3d[:ta2]=ta2
-
-	n3d[:xb1]=ht1.x[1]
-    n3d[:yb1]=ht1.y[1]
-    n3d[:zb1]=ht1.z[1]
-    n3d[:xb2]=ht2.x[1]
-    n3d[:yb2]=ht2.y[1]
-    n3d[:zb2]=ht2.z[1]
-
-    n3d[:nsipm1]=nrow(hq1df)
-    #n3d[:q1]= sum(hq1df.q)
-    #n3d[:r1]=r1
-    #n3d[:phistd1]=phistd1
-    #n3d[:zstd1]=zstd1
-
-    n3d[:nsipm2]=nrow(hq2df)
-    #n3d[:q2]= sum(hq2df.q)
-    #n3d[:r2]=r2
-    #n3d[:phistd2]=phistd2
-    #n3d[:zstd2]=zstd2
+	n3d[:xb1] = ht1.x[1]
+	n3d[:yb1] = ht1.y[1]
+	n3d[:zb1] = ht1.z[1]
+	n3d[:xb2] = ht2.x[1]
+	n3d[:yb2] = ht2.y[1]
+	n3d[:zb2] = ht2.z[1]
 
 	return hq1df, hq2df, n3d
 end
@@ -209,9 +183,9 @@ end
 						dc          ::DetConf,
 						df1         ::DataFrame,
 						df2         ::DataFrame,
-						primaries   ::DataFrame,
+						primaries   ::SubDataFrame,
 						sensor_xyz  ::DataFrame,
-						waveform    ::DataFrame,
+						waveform    ::SubDataFrame,
 						lor_algo    ::Function,
 						n3d         ::Dict)
 
@@ -233,12 +207,6 @@ function nema_dict!(event     ::Integer,
 	if result !== nothing
 		_, _, evtd = result
 		ks =  keys(evtd)
-		#ks2 =  keys(n3d)
-		#println(ks)
-		#println(ks2)
-		#@assert all(ks .== ks2) == true
-		push!(n3d[:phot1], df1.process_id[1] == 1)
-		push!(n3d[:phot2], df2.process_id[1] == 1)
 
 		for k in ks
 			push!(n3d[k],evtd[k])
