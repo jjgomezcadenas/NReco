@@ -191,26 +191,20 @@ end
 
 Fill the DataFrame for nema analysis
 """
-function nema_dict!(event     ::Integer,
-					dc        ::DetConf,
-					df1       ::DataFrame,
-					df2       ::DataFrame,
+function nema_dict!(n3df      ::DataFrame   ,
+					event     ::Integer     ,
+					dc        ::DetConf     ,
+					df1       ::DataFrame   ,
+					df2       ::DataFrame   ,
 					primaries ::SubDataFrame,
-					sensor_xyz::DataFrame,
+					sensor_xyz::DataFrame   ,
 					waveform  ::SubDataFrame,
-					lor_algo  ::Function,
-					n3d       ::Dict)
+					lor_algo  ::Function    )
 
-
-	result = recovent(event, dc, df1, df2,primaries, sensor_xyz, waveform, lor_algo)
+	result = recovent(event, dc, df1, df2, primaries, sensor_xyz, waveform, lor_algo)
 
 	if result !== nothing
-		_, _, evtd = result
-		ks =  keys(evtd)
-
-		for k in ks
-			push!(n3d[k],evtd[k])
-		end
+		push!(n3df, result[3])
 	end
 end
 
@@ -252,34 +246,41 @@ function nemareco(files    ::Vector{String},
 				  lor_algo ::Function=lor_maxq)
 
 	# define data dictionary
-
-	n3d = Dict(:phot1=>Bool[], :phot2=>Bool[],
-			   :nsipm1=>Int64[],:nsipm2=>Int64[],
-			   :q1=>Float32[],  :q2=>Float32[],
-	           :r1=>Float32[],  :r2=>Float32[],
-			   :phistd1=>Float32[],  :zstd1=>Float32[],
-			   :widz1=>Float32[], :widphi1=>Float32[], :corrzphi1=>Float32[],
-			   :phistd2=>Float32[], :zstd2=>Float32[],
-			   :widz2=>Float32[], :widphi2=>Float32[], :corrzphi2=>Float32[],
-			   :xs=>Float32[], :ys=>Float32[], :zs=>Float32[],
-		       :ux=>Float32[], :uy=>Float32[], :uz=>Float32[],
-	           :xt1=>Float32[], :yt1=>Float32[], :zt1=>Float32[],:t1=>Float32[],
-		       :xt2=>Float32[], :yt2=>Float32[], :zt2=>Float32[], :t2=>Float32[],
-               :x1=>Float32[],   :y1=>Float32[], :z1=>Float32[],
-               :x2=>Float32[],   :y2=>Float32[], :z2=>Float32[],
-			   :xr1=>Float32[], :yr1=>Float32[], :zr1=>Float32[], :tr1=>Float32[],
-               :xr2=>Float32[], :yr2=>Float32[], :zr2=>Float32[], :tr2=>Float32[],
-			   :xb1=>Float32[], :yb1=>Float32[], :zb1=>Float32[], :ta1=>Float32[],
-			   :xb2=>Float32[], :yb2=>Float32[], :zb2=>Float32[], :ta2=>Float32[])
-
-	# read one file to compute the radius of sipm
-	#pdf = read_abc(files[1])
-	#rsipm = rxy(pdf.sensor_xyz.x[2], pdf.sensor_xyz.y[2])
+	# TODO: It would be better to have a struct or similar with the keys and TYPES
+	# This would protect the filling and maybe improve the push time.
+	n3df = DataFrame(:phot1     => Bool[]   , :phot2     => Bool[]   ,
+					 :nsipm1    => Int64[]  , :nsipm2    => Int64[]  ,
+					 :q1        => Float32[], :q2        => Float32[],
+					 :r1        => Float32[], :r2        => Float32[],
+					 :phistd1   => Float32[], :phistd2   => Float32[],
+					 :widphi1   => Float32[], :widphi2   => Float32[],
+					 :zstd1     => Float32[], :zstd2     => Float32[],
+					 :widz1     => Float32[], :widz2     => Float32[],
+					 :corrzphi1 => Float32[], :corrzphi2 => Float32[],
+					 :xt1       => Float32[], :xt2       => Float32[],
+					 :yt1       => Float32[], :yt2       => Float32[],
+					 :zt1       => Float32[], :zt2       => Float32[],
+					 :t1        => Float32[], :t2        => Float32[],
+					 :x1        => Float32[], :x2        => Float32[],
+					 :y1        => Float32[], :y2        => Float32[],
+					 :z1        => Float32[], :z2        => Float32[],
+					 :xr1       => Float32[], :xr2       => Float32[],
+					 :yr1       => Float32[], :yr2       => Float32[],
+					 :zr1       => Float32[], :zr2       => Float32[],
+					 :tr1       => Float32[], :tr2       => Float32[],
+					 :xb1       => Float32[], :xb2       => Float32[],
+					 :yb1       => Float32[], :yb2       => Float32[],
+					 :zb1       => Float32[], :zb2       => Float32[],
+					 :ta1       => Float32[], :ta2       => Float32[],
+					 :xs        => Float32[], :ux        => Float32[],
+					 :ys        => Float32[], :uy        => Float32[],
+					 :zs        => Float32[], :uz        => Float32[])
 
 	for file in files[file_i:file_l]               # loop on files
 		println("reading file = ", file)
 		pdf = read_abc(file)            # read file
 		dfs = primary_in_lxe(pdf.vertices)       # primary photons in LXe
+
 		## We are interested in events with two primary photons in LXe
 		grp_dfs = filter(x -> any(x.track_id .== 1) && any(x.track_id .== 2),
 							groupby(dfs, :event_id))
@@ -290,10 +291,10 @@ function nemareco(files    ::Vector{String},
 			df1 = vdf[vdf.track_id .== 1, :]
             df2 = vdf[vdf.track_id .== 2, :]
 
-			nema_dict!(event.event_id, dconf, df1, df2,
+			nema_dict!(n3df, event.event_id, dconf, df1, df2,
 					   primaries[values(event)], pdf.sensor_xyz,
-					   waveforms[values(event)], lor_algo, n3d)
+					   waveforms[values(event)], lor_algo)
     	end
 	end
-	n3df = DataFrame(n3d)
+	return n3df
 end
