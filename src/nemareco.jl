@@ -274,9 +274,6 @@ function nemareco(files    ::Vector{String},
 				  file_l   ::Integer=1,
 				  lor_algo ::Function=lor_maxq)
 
-	# define data dictionary
-	# TODO: It would be better to have a struct or similar with the keys and TYPES
-	# This would protect the filling and maybe improve the push time.
 	output_vector = ATools.EventParameters[]
 
 	for file in files[file_i:file_l]               # loop on files

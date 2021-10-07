@@ -8,8 +8,8 @@ using Pkg
 Pkg.activate(normpath(joinpath(@__DIR__, "..")))
 
 using DataFrames
-using CSV
 using Glob
+using HDF5
 using ArgParse
 using Logging
 using Printf
@@ -99,9 +99,14 @@ function makenema(args)
 	println("reading = $(file_l - file_i + 1) files")
 	println("output file  = $output")
 
-	n3df = NReco.nemareco(files, dconf, file_i, file_l, lor_algo)
-
-	CSV.write(output, n3df)
+	h5open(output, "w") do h5out
+		pars_grp = create_group(h5out, "selected_events")
+		dtype    = ATools.event_pars_datatype()
+		evts     = NReco.nemareco(files, dconf, file_i, file_l, lor_algo)
+		dspace   = dataspace(evts)
+		dset     = create_dataset(pars_grp, "EventParameters", dtype, dspace)
+		write_dataset(dset, dtype, evts)
+	end
 end
 
 
@@ -118,7 +123,7 @@ function parse_commandline()
 		"--ofile", "-x"
             help = "output file"
             arg_type = String
-            default = "evtdf.csv"
+            default = "evtdf.h5"
 		"--filei", "-i"
 	        help = "number of initial file in glob list"
 	        default  = 1
