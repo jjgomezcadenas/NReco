@@ -100,12 +100,28 @@ function makenema(args)
 	println("output file  = $output")
 
 	h5open(output, "w") do h5out
-		pars_grp = create_group(h5out, "selected_events")
-		dtype    = ATools.event_pars_datatype()
-		evts     = NReco.nemareco(files, dconf, file_i, file_l, lor_algo)
-		dspace   = dataspace(evts)
-		dset     = create_dataset(pars_grp, "EventParameters", dtype, dspace)
-		write_dataset(dset, dtype, evts)
+		pars_grp    = create_group(h5out, "selected_events")
+		pars_dtype  = ATools.generate_hdf5_datatype(ATools.EventParameters)
+		conf_grp    = create_group(h5out, "configuration")
+		conf_dtype  = ATools.generate_hdf5_datatype(ATools.SimConfiguration)
+
+		nevt, evts  = NReco.nemareco(files, dconf, file_i, file_l, lor_algo)
+
+		rmin, rmax  = extrema(getfield.(evts, :r1))
+		# Maybe combine the DetConf and SimConfiguration types?
+		config_pars = ATools.SimConfiguration(SiPMPDE=dconf.pde,
+						ElecSTD=dconf.sigma_tof, SiPMThr=dconf.ecut,
+						SumQmin=dconf.qmin, SumQmax=dconf.qmax,
+						Ntof=dconf.ntof, NEvent=nevt, Rmin=rmin,
+						Rmax=rmax)#TODO: Calibration option implementation
+
+		## Save to file.
+		pars_dspace = dataspace(evts)
+		pars_dset   = create_dataset(pars_grp, "EventParameters", pars_dtype, pars_dspace)
+		write_dataset(pars_dset, pars_dtype, evts)
+		conf_dspace = dataspace([config_pars])
+		conf_dset   = create_dataset(conf_grp, "RunConfiguration", conf_dtype, conf_dspace)
+		write_dataset(conf_dset, conf_dtype, [config_pars])#Must be a better way
 	end
 end
 

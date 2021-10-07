@@ -30,7 +30,7 @@ end
 
 Check the validity of the event hitmaps for continued processing
 """
-function check_valid_hits(hitdf::DataFrame, event::Int64)
+function check_valid_hits(hitdf::Union{DataFrame, Nothing}, event::Int64)
 	if hitdf === nothing
 		@warn "Warning, hidtf evaluates to nothing for event = $event"
 		return false
@@ -275,10 +275,16 @@ function nemareco(files    ::Vector{String},
 				  lor_algo ::Function=lor_maxq)
 
 	output_vector = ATools.EventParameters[]
+	total_events  = 0
 
 	for file in files[file_i:file_l]               # loop on files
 		println("reading file = ", file)
 		pdf = read_abc(file)            # read file
+
+		# count the total number of events generated.
+		# This, like many other sections assumes primary generation of gammas.
+		total_events += nrow(pdf.primaries)
+
 		dfs = primary_in_lxe(pdf.vertices)       # primary photons in LXe
 
 		## We are interested in events with two primary photons in LXe
@@ -296,5 +302,5 @@ function nemareco(files    ::Vector{String},
 				   waveforms[values(event)], lor_algo)
     	end
 	end
-	return output_vector
+	return total_events, output_vector
 end

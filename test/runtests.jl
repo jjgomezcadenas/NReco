@@ -49,7 +49,7 @@ end
                 :x2, :y2, :z2, :xr1, :yr1, :zr1, :tr1,
                 :xr2, :yr2, :zr2, :tr2, :xb1, :yb1, :zb1, :ta1,
 			    :xb2, :yb2, :zb2, :ta2]
-    result = NReco.nemareco([fname], dconf)
+    _, result = NReco.nemareco([fname], dconf)
     result_fields = fieldnames(typeof(result[1]))
     @test length(result_fields) == length(exp_keys)
     @test all(in(exp_keys).(result_fields))
