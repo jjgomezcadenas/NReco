@@ -1,20 +1,16 @@
-#push!(LOAD_PATH,"../src/")
-#using DrWatson
-#@quickactivate(@__DIR__)
-#@quickactivate "JPetalo"
-#quickactivate("../.", "JPetalo")
-#include("../src/JPetalo.jl")
 using Pkg
 Pkg.activate(normpath(joinpath(@__DIR__, "..")))
 
+using ATools
+using NReco
+
+using ArgParse
+using Configurations
 using DataFrames
 using Glob
 using HDF5
-using ArgParse
 using Logging
 using Printf
-using ATools
-using NReco
 
 logger = SimpleLogger(stdout, Logging.Warn)
 old_logger = global_logger(logger)
@@ -29,8 +25,6 @@ function makenema(args)
 	outf    = args["ofile"]
 	file_i  = args["filei"]
 	file_l  = args["filel"]
-	qxmin   = Float32(args["qmin"])
-	qxmax   = Float32(args["qmax"])
 
 	lor_algo = NReco.lor_kmeans
 	if lorf == "lor_qmax"
@@ -41,55 +35,13 @@ function makenema(args)
 		mkdir(outd)
 	end
 	output = string(outd,"/", outf)
-	files = glob("*.h5",dr)
+	files  = glob("*.h5",dr)
 
-	if detconf == "pde_1_sigmatof_1ps"
-		pde  = 1.0f0
-		sigma_tof = 0.001f0
-		ecut = 10.0f0
-		qmin = 100.0f0
-		qmax = 50000.0f0
-		ntof =5
-		dconf = NReco.DetConf(pde, sigma_tof, ecut, qmin, qmax,  ntof)
-	elseif detconf == "pde_0.3_sigmatof_1ps"
-		pde  = 0.3f0
-		sigma_tof = 0.001f0
-		ecut = 3.0f0
-		qmin = 100.0f0
-		qmax = 5000.0f0
-		ntof =5
-	elseif detconf == "pde_0.3_sigmatof_85ps"
-		pde  = 0.3f0
-		sigma_tof = 0.085f0
-		ecut = 3.0f0
-		qmin = 100.0f0
-		qmax = 5000.0f0
-		ntof =5
-	elseif detconf == "pde_0.3_sigmatof_50ps"
-		pde  = 0.3f0
-		sigma_tof = 0.05f0
-		ecut = 3.0f0
-		qmin = 100.0f0
-		qmax = 5000.0f0
-		ntof =5
-	else                # by default, 40 ps jitter  & 30 ps electronics = 50 ps, harder cuts
-		pde  = 0.3f0
-		sigma_tof = 0.050f0
-		ecut = 1.0f0           # best performance for small  ecut
-		qmin = 100.0f0
-		qmax = 5000.0f0
-		ntof =7                 # increase sipms for average
+	if detconf != "default"
+		dconf = from_toml(NReco.DetConf, detconf)
+	else
+		dconf = NReco.DetConf()
 	end
-
-	if qxmin > 0
-		qmin = qxmin
-	end
-
-	if qxmax > 0
-		qmax = qxmax
-	end
-
-	dconf = NReco.DetConf(pde, sigma_tof, ecut, qmin, qmax, ntof)
 
 	println("makenema configuration")
 	println("detector configuration", dconf)
@@ -155,18 +107,7 @@ function parse_commandline()
 		"--detconf", "-c"
 			help = "Detector configuration"
 			arg_type = String
-			default = "all"
-		"--qmin", "-q"
-			help = "minimum charge (negative to set by detconf)"
-			arg_type = Float64
-			default = -1.0
-		"--qmax", "-Q"
-			help = "maximum charge (negative to set by detconf)"
-			arg_type = Float64
-			default = -1.0
-		#"--phot", "-p"
-		#	help = "Select photoelectric if 1"
-		#	action = :store_true
+			default = "default"
     end
 
     return parse_args(s)
