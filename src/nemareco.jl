@@ -297,9 +297,18 @@ function nemareco(files    ::Vector{String},
 			df1 = vdf[vdf.track_id .== 1, :]
 			df2 = vdf[vdf.track_id .== 2, :]
 
-			nema_dict!(output_vector, event.event_id, dconf, df1, df2,
-				   primaries[values(event)], pdf.sensor_xyz,
-				   waveforms[values(event)], lor_algo)
+			try
+				wvf = waveforms[values(event)]
+				nema_dict!(output_vector, event.event_id, dconf, df1, df2,
+					   primaries[values(event)], pdf.sensor_xyz,
+					   wvf, lor_algo)
+			catch err
+				if err isa KeyError
+					continue
+				else
+					rethrow(err)
+				end
+			end
     	end
 	end
 	return total_events, output_vector
