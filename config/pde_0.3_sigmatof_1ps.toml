@@ -1,0 +1,6 @@
+pde  = 0.3
+sigma_tof = 0.001
+ecut = 3.0
+qmin = 100.0
+qmax = 5000.0
+ntof = 5

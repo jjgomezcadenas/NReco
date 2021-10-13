@@ -52,10 +52,8 @@ Return the coordinates of the SiPM with maximum charge
 
 """
 function find_xyz_sipm_qmax(hitdf::DataFrame)
-	qxmax, xmax = find_max_xy(hitdf,"x", "q")
-	qymax, ymax = find_max_xy(hitdf,"y", "q")
-	qzmax, zmax = find_max_xy(hitdf,"z", "q")
-	return Hit(xmax,ymax,zmax,qxmax)
+	indx, xmax, qxmax = find_max_xy(hitdf, "x", "q")
+	return Hit(xmax, hitdf.y[indx], hitdf.z[indx], qxmax)
 end
 
 
@@ -125,8 +123,6 @@ function lor_kmeans(hitdf::DataFrame)
 	Mhits = get_hits_as_matrix(hitdf)  # take the underlying matrix
 	kr = kmeans(Mhits, 2)              # apply kmeans
 	ka = assignments(kr) # get the assignments of points to clusters
-	kc = counts(kr) # get the cluster sizes
-	#rk = kr.centers # get the cluster centers
 
 	hq2df, hq1df = ksipmsel(hitdf, ka)   # select using kmeans list
 	b1 = baricenter(hq1df)     # baricenters

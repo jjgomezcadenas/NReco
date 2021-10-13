@@ -3,6 +3,7 @@ Pkg.activate(normpath(joinpath(@__DIR__, "..")))
 
 using DataFrames
 using CSV
+using Configurations
 using Glob
 using ArgParse
 using Logging
@@ -19,7 +20,7 @@ function makezoo(args)
 	outf    = args["ofile"]
 	file_i  = args["filei"]
 	file_l  = args["filel"]
-	
+
 	if isdir(outd) == false
 		mkdir(outd)
 	end
@@ -30,14 +31,11 @@ function makezoo(args)
 	output = string(outd,"/", outf)
 	files = glob("*.h5",dr)
 
-    pde  = 0.3f0
-    sigma_tof = 0.050f0
-    ecut = 2.0f0           # best performance for small  ecut
-    qmin = 1900.0f0
-    qmax = 2200.0f0
-    ntof =7                 # increase sipms for average
-	
-	dconf = NReco.DetConf(pde, sigma_tof, ecut, qmin, qmax, ntof)
+	if detconf != "default"
+		dconf = from_toml(NReco.DetConf, detconf)
+	else
+		dconf = NReco.DetConf()
+	end
 
 	println("number of files in data dir = $(length(files))")
 	println("reading = $(file_l - file_i + 1) files")
@@ -70,6 +68,10 @@ function parse_commandline()
 		    help = "number of last file in glob list"
 		    default  = 1
 			arg_type = Int
+		"--config", "-c"
+			help = "detector configuration"
+			default = "default"
+			arg_type = String
     end
 
     return parse_args(s)

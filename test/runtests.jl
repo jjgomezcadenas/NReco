@@ -30,8 +30,8 @@ vdf   = pdf.vertices
     @test mean(NReco.select_by_column_value_interval(wevt, "time", 5.0, 10.0).time) >5.0
     @test mean(NReco.select_by_column_value_interval(wevt, "time", 5.0, 10.0).time) <10.0
 
-    mx, imx = NReco.find_max_xy(wevt, "sensor_id", "time")
-    m, i    = findmax(wevt.time)
+    _, imx, _ = NReco.find_max_xy(wevt, "sensor_id", "time")
+    m, i      = findmax(wevt.time)
     @test wevt.sensor_id[i] == imx
 end
 
@@ -40,21 +40,22 @@ end
 end
 
 @testset "nemareco" begin
-    exp_keys = ["phot1", "phot2", "nsipm1", "nsipm2", "q1", "q2",
-	            "r1",  "r2",
-                "phistd1", "zstd1", "widz1", "widphi1", "corrzphi1",
-                "phistd2", "zstd2", "widz2", "widphi2", "corrzphi2",
-			    "xs", "ys", "zs", "ux", "uy", "uz", "xt1", "yt1", "zt1",
-                "t1", "xt2", "yt2", "zt2", "t2", "x1", "y1", "z1",
-                "x2", "y2", "z2", "xr1", "yr1", "zr1", "tr1",
-                "xr2", "yr2", "zr2", "tr2", "xb1", "yb1", "zb1", "ta1",
-			    "xb2", "yb2", "zb2", "ta2"]
-    result = NReco.nemareco([fname], dconf)
-    @test length(names(result)) == length(exp_keys)
-    @test all(in(exp_keys).(names(result)))
+    exp_keys = [:event_id, :phot1, :phot2, :nsipm1, :nsipm2, :q1, :q2,
+	            :r1,  :r2, :r1x, :r2x,
+                :phistd1, :zstd1, :widz1, :widphi1, :corrzphi1,
+                :phistd2, :zstd2, :widz2, :widphi2, :corrzphi2,
+			    :xs, :ys, :zs, :ux, :uy, :uz, :xt1, :yt1, :zt1,
+                :t1, :xt2, :yt2, :zt2, :t2, :x1, :y1, :z1,
+                :x2, :y2, :z2, :xr1, :yr1, :zr1, :tr1,
+                :xr2, :yr2, :zr2, :tr2, :xb1, :yb1, :zb1, :ta1,
+			    :xb2, :yb2, :zb2, :ta2]
+    _, result = NReco.nemareco([fname], dconf)
+    result_fields = fieldnames(typeof(result[1]))
+    @test length(result_fields) == length(exp_keys)
+    @test all(in(exp_keys).(result_fields))
     filter_func = ismissing, isnothing, isnan
-    corrzphi1   = filter(c -> !any(f -> f(c), filter_func), result.corrzphi1)
-    corrzphi2   = filter(c -> !any(f -> f(c), filter_func), result.corrzphi2)
+    corrzphi1   = filter(c -> !any(f -> f(c), filter_func), getfield.(result, :corrzphi1))
+    corrzphi2   = filter(c -> !any(f -> f(c), filter_func), getfield.(result, :corrzphi2))
     @test all((corrzphi1 .<= 1.0) .& (corrzphi1 .>= -1.0))
     @test all((corrzphi2 .<= 1.0) .& (corrzphi2 .>= -1.0))
 end

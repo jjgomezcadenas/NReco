@@ -18,16 +18,18 @@ and produce a hitdf (xyzqt) data frame, where each SiPM has information of posit
 """
 function recohits(event       ::Integer,
 				  sensor_xyz  ::DataFrame,
-				  waveform    ::DataFrame,
+				  waveform    ::SubDataFrame,
 				  qcut        ::Float32,
 				  pde         ::Float32,
 				  sigma_tof   ::Float32)
 
   	# select the waveform of this event
-	wfm = select_by_column_value(waveform, "event_id", event)
-	if nrow(wfm) == 0
+	if nrow(waveform) == 0
 		return nothing
 	end
+
+	## make a copy of the event.
+	wfm = copy(waveform)
 
 	# add a column with probability of surviving pdf cut (pass if prob < pde)
 	wfm[!, "prob"] = rand(Float32, nrow(wfm))

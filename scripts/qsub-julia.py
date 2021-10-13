@@ -49,7 +49,7 @@ template = """#!/bin/bash
 #cd $PBS_O_WORKDIR
 cd {launch_dir}
 
-/software/julia-1.6.1/bin/julia {program} -d {dir_in} -o {dir_out} -x evtdf-{first:0{width}}-{last:0{width}}.csv -i {first} -l {last} {other_args}
+/software/julia-1.6.1/bin/julia {program} -d {dir_in} -o {dir_out} -x evtdf-{first:0{width}}-{last:0{width}}.h5 -i {first} -l {last} {other_args}
 """
 
 output_directory = args.dir_out
