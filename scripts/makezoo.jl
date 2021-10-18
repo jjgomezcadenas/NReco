@@ -20,6 +20,7 @@ function makezoo(args)
 	outf    = args["ofile"]
 	file_i  = args["filei"]
 	file_l  = args["filel"]
+	detconf = args["config"]
 
 	if isdir(outd) == false
 		mkdir(outd)
