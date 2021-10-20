@@ -1,5 +1,5 @@
 input_dir = "../data/"
-conf_dir = "n3-dz1m-LXe30mm-noQrz-4/"
+conf_dir = "n4-dz1m-LXe30mm-noQrz-4-singles/"
 plot_dir = "plot_dir"
 qmin = 1900.0
 qmax = 2200.0
