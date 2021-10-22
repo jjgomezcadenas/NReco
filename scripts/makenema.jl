@@ -35,7 +35,10 @@ function makenema(args)
 		mkdir(outd)
 	end
 	output = string(outd,"/", outf)
-	files  = glob("*.h5",dr)
+
+	## Patch here so we can read actually select in a directory which
+	## is already partially processed. Needs to be improved in general.
+	files  = sort(glob("*.h5", dr), by=x->parse(Int64, split(x, "-")[end][1:end-3]))
 
 	if detconf != "default"
 		dconf = from_toml(NReco.DetConf, detconf)
