@@ -22,6 +22,14 @@ parser.add_argument('-o', '--dir-out',
 parser.add_argument('-n', '--number-of-jobs', type=int,
                     help='Split work among N jobs', required=True)
 
+parser.add_argument('-f', '--first-file', type=int,
+                    default=0,
+                    help='First file number to be processed')
+
+parser.add_argument('-l', '--last-file', type=int,
+                    default=-1,
+                    help='Last file number to be processed')
+
 args, other_args = parser.parse_known_args()
 other_args = ' '.join(other_args)
 
@@ -29,10 +37,14 @@ n_files = len(glob(f'{args.dir_in}/*')) # Need python >= 3.6
 
 launch_dir = os.getcwd()
 
+## This all has to be improved and generalised!!
 number_of_jobs = args.number_of_jobs
-small_job_size, number_of_big_jobs = divmod(n_files, number_of_jobs)
+first_file     = args.first_file
+last_file      = args.last_file if args.last_file > 0 else n_files
+small_job_size, number_of_big_jobs = divmod(last_file - first_file, number_of_jobs)
 number_of_small_jobs = number_of_jobs - number_of_big_jobs
-first_file_in_job = 1
+## This is especially confusing (seems to be due to indexing difference Julia/python)
+first_file_in_job = first_file + 1
 job_file_ranges = []
 for _ in range(number_of_big_jobs):
     job_file_ranges.append((first_file_in_job, first_file_in_job + small_job_size))
