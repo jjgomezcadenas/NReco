@@ -3,5 +3,5 @@ include("types.jl")
 include("recof.jl")
 include("recohits.jl")
 include("nemareco.jl")
-include("nzoo.jl")
+include("classify_events.jl")
 end
