@@ -26,11 +26,8 @@ function makezoo(args)
 		mkdir(outd)
 	end
 
-	output = string(outd,"/", outf)
-	files = glob("*.h5",dr)
-
-	output = string(outd,"/", outf)
-	files = glob("*.h5",dr)
+	output_path = joinpath(outd, outf)
+	filenames   = glob("*.h5",dr)
 
 	if detconf != "default"
 		dconf = from_toml(NReco.DetConf, detconf)
@@ -42,8 +39,8 @@ function makezoo(args)
 	println("reading = $(file_l - file_i + 1) files")
 	println("output file  = $output")
 
-	n3df = NReco.zoo(files, dconf, file_i, file_l)
-	CSV.write(output, n3df)
+	n3df = NReco.zoo(filenames, dconf, file_i, file_l)
+	CSV.write(output_path, n3df)
 end
 
 
