@@ -4,6 +4,7 @@ using Clustering
 using Statistics
 using LinearAlgebra
 using ATools
+using HDF5
 
 # Selection
 
@@ -183,79 +184,44 @@ function xyzstd(hitdf::DataFrame, column::String="x")
 end
 
 
+"""
+    filter_energies
+"""
+function filter_energies(df::DataFrame, qmin::Float32, qmax::Float32)
+    interval = ATools.range_bound(qmin, qmax, ATools.OpenBound)
+    ndfq     = filter(x -> interval.(x.q1) .& interval.(x.q2), df)
+end
 
 
-
-# """
-# 	get_truehits(GP)
-#
-# Return TrueHits for each one of the gammas in the true lor.
-#
-# """
-# function get_truehits(GP)
-# 	function xyzte(GP)
-# 		eid = [gp.event_id[1] for gp in GP]
-# 		x = [gp.x[1] for gp in GP]
-# 		y = [gp.y[1] for gp in GP]
-# 		z = [gp.z[1] for gp in GP]
-# 		t = [gp.t[1] for gp in GP]
-# 		e = [gp.pre_KE[1] for gp in GP]
-# 		return eid,x,y,z,t,e
-# 	end
-#
-# 	GP1 = []
-# 	GP2 = []
-# 	for gp in GP
-# 		df1 = select_by_column_value(gp, "track_id", 1)
-# 		df2 = select_by_column_value(gp, "track_id", 2)
-# 		push!(GP1,df1)
-# 		push!(GP2,df2)
-# 	end
-#
-# 	return TrueHits(xyzte(GP1)...), TrueHits(xyzte(GP2)...)
-# end
-#
-#
-
-# """
-# 	sipm_xyzq(evt::DataFrame, sxyz::DataFrame)
-#
-# Return the hits for an event
-#
-# """
-# function sipm_xyzq(evt::DataFrame, sxyz::DataFrame)
-# 	sids = evt[!,:sensor_id]
-# 	pos = sipm_pos.((sxyz,),sids)
-# 	x = [p[1] for p in pos]
-# 	y = [p[2] for p in pos]
-# 	z = [p[3] for p in pos]
-# 	q = evt[!,:charge]
-# 	return DataFrame(x=x,y=y,z=z,q=q)
-# end
-#
-#
-# function sipm_xyzq(qdf::DataFrame, sxyz::DataFrame)
-#     sids = qdf.sensor_id
-#     pos = sipm_pos.((sxyz,),sids)
-#     x = [p[1] for p in pos]
-#     y = [p[2] for p in pos]
-#     z = [p[3] for p in pos]
-#     return DataFrame(x=x,y=y,z=z,q=qdf.Q)
-# end
+"""
+    calibration_function
+"""
+function calibration_function(calibFunc::NReco.CalFunction, rmin::Real, rmax::Real)
+    line_pars = h5open(calibFunc.cal_file) do h5cal
+        bias   = read_attribute(h5cal[calibFunc.cal_grp], calibFunc.cal_std * "-bias" )
+        lconst = read_attribute(h5cal[calibFunc.cal_grp], calibFunc.cal_std * "-const")
+        llin   = read_attribute(h5cal[calibFunc.cal_grp], calibFunc.cal_std * "-lin"  )
+        return bias, lconst, llin
+    end
+    cal_func = ATools.predict_interaction_radius(ATools.gpol1(line_pars[2:end]),
+        rmin, rmax, line_pars[1])
+    return cal_func
+end
 
 
-# """
-# 	select_truehit(th::TrueHits, index::Integer)
-#
-# Returns TrueHit corresponding to index from a vector of TrueHits
-#
-# """
-# function select_truehit(th::TrueHits, index::Integer)
-# 	eid = th.event_id[index]
-# 	x   = th.x[index]
-# 	y   = th.y[index]
-# 	z   = th.z[index]
-# 	t   = th.t[index]
-# 	e   = th.e[index]
-# 	return TrueHit(eid,x,y,z,t,e)
-# end
+"""
+    calculate_interaction_radius!
+
+"""
+function calculate_interaction_radius!(df::DataFrame, predictor::Function, variable::String)
+    if variable == "cstd" && !(:cstd in propertynames(df))
+        # We want to use the combined std which isn't necessarily saved in the H5
+        comb_std(z, phi) = sqrt(z^2 + (rmax * phi)^2)
+        transform!(df, [:zstd1, :phistd1] => ByRow(comb_std) => :cstd1,
+            [:zstd2, :phistd2] => ByRow(comb_std) => :cstd2)
+    end
+    sym1 = Symbol(variable * "1")
+    sym2 = Symbol(variable * "2")
+    transform!(df, sym1 => predictor => :r1x, sym2 => predictor => :r2x)
+    nothing
+end
