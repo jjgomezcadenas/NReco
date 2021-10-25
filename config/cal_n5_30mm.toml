@@ -1,6 +1,11 @@
-input_dir = "../data/"
+input_dir = "../../h5data/"
 conf_dir = "n5-dz1m-LXe30mm-noQrz-4-magic/"
 plot_dir = "plot_dir"
 qmin = 1900.0
 qmax = 2200.0
-save_cal = true
+save_cal = false
+
+[cal_func]
+cal_file = "../config/radius_calibration.h5"
+cal_grp  = "n3-30mm"
+cal_std  = "cstd"
