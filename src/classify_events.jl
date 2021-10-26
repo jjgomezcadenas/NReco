@@ -2,112 +2,88 @@ using DataFrames
 using ATools
 
 
-function rhits(event::Integer, ecut::Number, pde::Number,
-	Qdf::DataFrame, sxyzdf::DataFrame)
-
-	# select the event
-	qdf = select_by_column_value(Qdf, "event_id", event)
-	# multiply vector of charges by PDE and add column to the DF
-	Q = Float32.(qdf.charge * pde)
-	qdf[!,"Q"] = Q
-	# Select SiPMs with charge (q x PDE) about ecut
-	qdfQ   = qdf[qdf.Q.>ecut,:]
-	return sipm_xyzq(qdfQ, sxyzdf)
+function rhits(evt_charge::SubDataFrame, sensor_xyz::DataFrame,
+			   ecut      ::Float32     , pde       ::Float32  )::DataFrame
+	Q            = Float32.(evt_charge.charge * pde)
+	sel_sipm     = evt_charge[Q .> ecut, :]
+	hitdf        = DataFrame(sipm_xyz(sel_sipm[:, :sensor_id], sensor_xyz))
+	hitdf[!, :q] = Q[Q .> ecut]
+	return hitdf
 end
 
 
-function sipm_xyzq(qdf::DataFrame, sxyz::DataFrame)
-	sids = qdf.sensor_id
-	pos = sipm_pos.((sxyz,),sids)
-	x = [p[1] for p in pos]
-	y = [p[2] for p in pos]
-	z = [p[3] for p in pos]
-	return DataFrame(x=x,y=y,z=z,q=qdf.Q)
+function sipm_xyz(sids::Vector{Int64}, sxyz::DataFrame)
+	pos = sipm_pos.((sxyz,), sids)
+	xyz = [(x=p[1], y=p[2], z=p[3]) for p in pos]
+	return xyz
 end
 
-function recoevent!(event      ::Integer,
-				   dc          ::DetConf,
-				   sensor_xyz  ::DataFrame,
-				   waveform    ::DataFrame,
-				   n3d         ::Dict)
 
-	n3d["total"] = n3d["total"] + 1
+function recoevent!(evt_counts::Dict   , evt_charge::SubDataFrame,
+					dconfig   ::DetConf, sensor_xyz::DataFrame   )
 
 	#hit dataframe
-	hitdf = rhits(event, dc.ecut, dc.pde, waveform, sensor_xyz) 
-	
-	#recohits(event,sensor_xyz, waveform, dc.ecut, dc.pde, dc.sigma_tof)
-
-	if hitdf === nothing
-		n3d["empty"] = n3d["empty"] + 1
-		return n3d
-	end
+	hitdf = rhits(evt_charge, sensor_xyz, dconfig.ecut, dconfig.pde)
 
 	if nrow(hitdf) < 2
-		n3d["empty"] = n3d["empty"] + 1
-		return n3d
+		evt_counts[:empty] += 1
+		return nothing
 	end
 
 	_, _, hq1df, hq2df = lor_maxq(hitdf)
 
-	if nrow(hq1df) < 2 || nrow(hq2df) < 2
-		n3d["single"] = n3d["single"] + 1
+	qbound    = ATools.range_bound(dconfig.qmin, dconfig.qmax, ATools.OpenBound)
+	q1_prompt = qbound(sum(hq1df.q))
+	q2_prompt = qbound(sum(hq2df.q))
 
-		if nrow(hq1df) < 2 
-			q = sum(hq2df.q)
-			if q > dc.qmin && q < dc.qmax
-				n3d["single-prompt"] = n3d["single-prompt"] + 1
+	if nrow(hq1df) < 2 || nrow(hq2df) < 2 ## This doesn't properly take into account both being < 2
+		evt_counts[:single] += 1
+
+		if nrow(hq1df) < 2
+			if q2_prompt
+				evt_counts[:single_prompt] += 1
 			end
-
 		else
-			q = sum(hq1df.q)
-			if q > dc.qmin && q < dc.qmax
-				n3d["single-prompt"] = n3d["single-prompt"] + 1
+			if q1_prompt
+				evt_counts[:single_prompt] += 1
 			end
 		end
-
-		return n3d
+		return nothing
 	end
 
+	evt_counts[:prompt] += 1
 
-	n3d["prompt"]=n3d["prompt"] + 1
-
-	q1 = sum(hq1df.q)
-	q2 = sum(hq2df.q)
-
-	if q1 > dc.qmin && q1 < dc.qmax
-		if q2 > dc.qmin && q2 < dc.qmax
-			n3d["good-prompt"]=n3d["good-prompt"] + 1
-		end
+	if q1_prompt && q2_prompt
+		evt_counts[:good_prompt] += 1
 	end
-
-	return n3d 
+	nothing
 end
 
 
-function zoo(files    ::Vector{String},
-			 dconf    ::DetConf,
-	         file_i   ::Integer=1,
-			 file_l   ::Integer=1)
+function event_classifier(filenames ::Vector{String}, dconf    ::DetConf  ,
+						  first_file::Integer=1     , last_file::Integer=1)
 
-	# define data dictionary
-
-	n3d = Dict("total" =>0, "empty"=>0,"single"=>0, "prompt"=>0, 
-	           "single-prompt"=>0, "good-prompt"=>0)
+	evt_counts = Dict(:total  => zero(Int64), :empty  => zero(Int64),
+					  :single => zero(Int64), :prompt => zero(Int64),
+	           		  :single_prompt => zero(Int64), :good_prompt => zero(Int64))
 
 	ievt = 0
-	for file in files[file_i:file_l]               # loop on files
-		println("reading file = ", file)
-		pdf = read_abc(file)            # read file
-		for event in unique(pdf.vertices.event_id)       #loop on events
-			ievt+=1 
+	for fn in filenames[first_file:last_file]
+		println("reading file = ", fn)
+		pdf = read_abc(fn)
+
+		evt_counts[:total] += nrow(pdf.primaries)
+		evt_counts[:empty] += length(setdiff(pdf.primaries.event_id   ,
+											 pdf.total_charge.event_id))
+		for evt_charge in groupby(pdf.total_charge, :event_id)
+			ievt+=1
 			if ievt%100 == 0
-				println("reading event ", ievt, "event id =", event)
+				println("reading event ", ievt, "event id =", evt_charge.event_id[1])
 			end
 
-			recoevent!(event, dconf, pdf.sensor_xyz, pdf.total_charge, n3d)
+			recoevent!(evt_counts, evt_charge, dconf, pdf.sensor_xyz)
     	end
 	end
-	n3df = DataFrame(n3d)
-	return n3df
+	evt_df = DataFrame(evt_counts)
+	return evt_df
 end
