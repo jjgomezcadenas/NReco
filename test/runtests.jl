@@ -5,11 +5,12 @@ using DataFrames
 using Distributions
 using Statistics
 using Logging
+using DataFrames
 #using StatsModels
 # Lower function verbosity
 logger = global_logger(SimpleLogger(stdout, Logging.Warn))
 
-fname = "../data/testdata/nema3-window-1m-LXe-20mm-1-999.h5"
+fname = "testdata/n3-window-1m-LXe-20mm-1-20.h5"
 pdf   = NReco.read_abc(fname)
 dconf = NReco.DetConf(0.3f0, 0.05f0, 2.0f0, 100.0f0, 5000.0f0, 7)
 sxyz  = pdf.sensor_xyz
@@ -72,4 +73,18 @@ end
     corrzphi2   = filter(c -> !any(f -> f(c), filter_func), getfield.(result, :corrzphi2))
     @test all((corrzphi1 .<= 1.0) .& (corrzphi1 .>= -1.0))
     @test all((corrzphi2 .<= 1.0) .& (corrzphi2 .>= -1.0))
+end
+
+@testset "classify_events" begin
+    evt_keys   = [:total, :empty, :single, :prompt, Symbol("single-prompt"), Symbol("good-prompt")]
+    evt_counts = NReco.zoo([fname], dconf)
+    @test length(names(evt_counts)) == length(evt_keys)
+    @test all(in(evt_keys).(propertynames(evt_counts)))
+
+    @test evt_counts[!, :total ][1] == 16
+    @test evt_counts[!, :empty ][1] ==  3
+    @test evt_counts[!, :single][1] == 11
+    @test evt_counts[!, :prompt][1] ==  2
+    @test evt_counts[!, "single-prompt"][1] == 11
+    @test evt_counts[!, "good-prompt"][1] == 2
 end
