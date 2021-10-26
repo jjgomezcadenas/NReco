@@ -39,7 +39,7 @@ function makezoo(args)
 	println("reading = $(file_l - file_i + 1) files")
 	println("output file  = $output")
 
-	n3df = NReco.zoo(filenames, dconf, file_i, file_l)
+	n3df = NReco.event_classifier(filenames, dconf, file_i, file_l)
 	CSV.write(output_path, n3df)
 end
 
