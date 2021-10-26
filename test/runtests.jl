@@ -81,8 +81,8 @@ end
     @test length(names(evt_counts)) == length(evt_keys)
     @test all(in(evt_keys).(propertynames(evt_counts)))
 
-    @test evt_counts[!, :total        ][1] == 16
-    @test evt_counts[!, :empty        ][1] ==  3
+    @test evt_counts[!, :total        ][1] == 20
+    @test evt_counts[!, :empty        ][1] ==  7
     @test evt_counts[!, :single       ][1] == 11
     @test evt_counts[!, :prompt       ][1] ==  2
     @test evt_counts[!, :single_prompt][1] == 11
