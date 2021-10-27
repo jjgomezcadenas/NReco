@@ -50,7 +50,7 @@ function calibrate_lors()
 
     ndfq         = NReco.filter_energies(ndf, conf.qmin, conf.qmax)
 
-    calculate_interaction_radius!(ndfq, cal_func, conf.cal_func.cal_std)
+    NReco.calculate_interaction_radius!(ndfq, cal_func, conf.cal_func.cal_std, rmax)
 
     # We need/want units here. More generalised use of units should be implemented.
     ## Get the true interaction radius (Why not saved?)

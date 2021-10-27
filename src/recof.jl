@@ -213,7 +213,10 @@ end
     calculate_interaction_radius!
 
 """
-function calculate_interaction_radius!(df::DataFrame, predictor::Function, variable::String)
+function calculate_interaction_radius!(df       ::DataFrame,
+                                       predictor::Function,
+                                       variable ::String,
+                                       rmax     ::Union{Real, Nothing}=nothing)
     if variable == "cstd" && !(:cstd in propertynames(df))
         # We want to use the combined std which isn't necessarily saved in the H5
         comb_std(z, phi) = sqrt(z^2 + (rmax * phi)^2)
