@@ -78,13 +78,14 @@ end
 @testset "classify_events" begin
     evt_keys   = [:total, :empty, :single, :prompt, :single_prompt, :good_prompt]
     evt_counts = NReco.event_classifier([fname], dconf)
-    @test length(names(evt_counts)) == length(evt_keys)
-    @test all(in(evt_keys).(propertynames(evt_counts)))
+    evt_fields = fieldnames(typeof(evt_counts))
+    @test length(evt_fields) == length(evt_keys)
+    @test all(in(evt_keys).(evt_fields))
 
-    @test evt_counts[!, :total        ][1] == 20
-    @test evt_counts[!, :empty        ][1] ==  7
-    @test evt_counts[!, :single       ][1] == 11
-    @test evt_counts[!, :prompt       ][1] ==  2
-    @test evt_counts[!, :single_prompt][1] == 11
-    @test evt_counts[!, :good_prompt  ][1] ==  2
+    @test evt_counts.total         == 20
+    @test evt_counts.empty         ==  7
+    @test evt_counts.single        == 11
+    @test evt_counts.prompt        ==  2
+    @test evt_counts.single_prompt == 11
+    @test evt_counts.good_prompt   ==  2
 end

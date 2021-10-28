@@ -2,8 +2,8 @@ using Pkg
 Pkg.activate(normpath(joinpath(@__DIR__, "..")))
 
 using DataFrames
-using CSV
 using Configurations
+using HDF5
 using Glob
 using ArgParse
 using Logging
@@ -35,12 +35,20 @@ function makezoo(args)
 		dconf = NReco.DetConf()
 	end
 
-	println("number of files in data dir = $(length(files))")
+	println("number of files in data dir = $(length(filenames))")
 	println("reading = $(file_l - file_i + 1) files")
-	println("output file  = $output")
+	println("output file  = $output_path")
 
-	n3df = NReco.event_classifier(filenames, dconf, file_i, file_l)
-	CSV.write(output_path, n3df)
+	h5open(output_path, "w") do h5out
+		grp        = create_group(h5out, "EventCounts")
+		dtype      = ATools.generate_hdf5_datatype(ATools.EventTypes)
+
+		evt_counts = NReco.event_classifier(filenames, dconf, file_i, file_l)
+
+		dspace     = dataspace([evt_counts])
+		dset       = create_dataset(grp, "counts", dtype, dspace)
+		write_dataset(dset, dtype, [evt_counts])
+	end
 end
 
 
