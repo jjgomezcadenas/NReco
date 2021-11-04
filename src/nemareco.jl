@@ -52,14 +52,14 @@ Check if the hemispheres have detected charge above threshold
 function check_valid_charge(h1::DataFrame, h2::DataFrame, dc::DetConf)
 	q1 = sum(h1.q)
 	q2 = sum(h2.q)
-	@info " total charge: q1 = $(n3d[:q1]), q2 = $(n3d[:q2])"
+	@info " total charge: q1 = $(q1), q2 = $(q2)"
 	if q1 < dc.qmin || q1 > dc.qmax
-		@info "Warning, q1 is $(n3d[:q1]) for event $event"
+		@info "Warning, q1 is $(q1) for event"
 		return false
 	end
 
 	if q2 < dc.qmin || q2 > dc.qmax
-		@info "Warning, q2 is $(n3d[:q2]) for event $event"
+		@info "Warning, q2 is $(q2) for event"
 		return false
 	end
 	return true
@@ -131,8 +131,8 @@ function recovent(event     ::Integer,
 	ht2   = select_by_column_value(hq2df, "tmin", tmin2)
 
 	@info " New (x,y,z) positions estimated from r1, r2 & r1q, r2q"
-	@info " from r1:  x1 = $(n3d[:x1]), y1=$(n3d[:y1]), z1=$(n3d[:z1])"
-	@info " from r2:  x2 = $(n3d[:x2]), y1=$(n3d[:y2]), z1=$(n3d[:z2])"
+	@info " from r1:  x1 = $(xyz1[1]), y1=$(xyz1[2]), z1=$(xyz1[3])"
+	@info " from r2:  x2 = $(xyz2[1]), y1=$(xyz2[2]), z1=$(xyz2[3])"
 
 	@info " hit dataframe: size = $size(hitdf)"
 	@debug first(hitdf, 5)
