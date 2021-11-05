@@ -1,6 +1,7 @@
 using NReco
 using ATools
 using Test
+using DataFrames
 using Distributions
 using Statistics
 using Logging
@@ -36,7 +37,20 @@ vdf   = pdf.vertices
 end
 
 @testset "recof" begin
-    @test all(NReco.primary_in_lxe(vdf).parent_id .== 0) == 1
+    @test all(NReco.primary_in_lxe(vdf).parent_id .== 0)
+
+    df          = DataFrame(:q1=>Float32[100.0, 120.5, 132.6],
+                            :q2=>Float32[123.6, 122.9,  99.9])
+    filtered_df = NReco.filter_energies(df, 100.0f0, 150.0f0)
+    @test nrow(filtered_df) == 1
+    @test all(in(Array(filtered_df[1, :])).([120.5f0, 122.9f0]))
+
+    df[!, :zstd1] = Float32[2.5, 3.2, 4.9]
+    df[!, :zstd2] = Float32[7.9, 4.5, 2.3]
+    NReco.calculate_interaction_radius!(df, x -> 2*x, "zstd")
+    @test all(in(propertynames(df)).([:r1x, :r2x]))
+    @test all(isapprox.(2 * df[!, :zstd1], df[!, :r1x]))
+    @test all(isapprox.(2 * df[!, :zstd1], df[!, :r1x]))
 end
 
 @testset "nemareco" begin
