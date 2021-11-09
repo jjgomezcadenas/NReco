@@ -6,16 +6,10 @@ function rhits(evt_charge::SubDataFrame, sensor_xyz::DataFrame,
 			   ecut      ::Float32     , pde       ::Float32  )::DataFrame
 	Q            = Float32.(evt_charge.charge * pde)
 	sel_sipm     = evt_charge[Q .> ecut, :]
-	hitdf        = DataFrame(sipm_xyz(sel_sipm[:, :sensor_id], sensor_xyz))
+	hitdf        = leftjoin(sel_sipm, sensor_xyz, on=:sensor_id)
+	disallowmissing!(hitdf, [:x, :y, :z])
 	hitdf[!, :q] = Q[Q .> ecut]
-	return hitdf
-end
-
-
-function sipm_xyz(sids::Vector{Int64}, sxyz::DataFrame)
-	pos = sipm_pos.((sxyz,), sids)
-	xyz = [(x=p[1], y=p[2], z=p[3]) for p in pos]
-	return xyz
+	return hitdf[!, [:x, :y, :z, :q]]
 end
 
 
