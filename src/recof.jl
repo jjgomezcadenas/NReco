@@ -67,7 +67,6 @@ the sign of the angle with the SiPM of max charge
 function sipmsel(hdf::DataFrame)
 	simax = find_xyz_sipm_qmax(hdf)
 	npr   = xyz_dot(hdf, simax)
-	mask =[n>0 ? true : false for n in npr]
 	return hdf[(npr.>0), :], hdf[(npr.<0), :]
 end
 
