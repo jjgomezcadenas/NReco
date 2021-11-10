@@ -5,11 +5,12 @@ using DataFrames
 using Distributions
 using Statistics
 using Logging
+using DataFrames
 #using StatsModels
 # Lower function verbosity
 logger = global_logger(SimpleLogger(stdout, Logging.Warn))
 
-fname = "../data/testdata/nema3-window-1m-LXe-20mm-1-999.h5"
+fname = "testdata/n3-window-1m-LXe-20mm-1-20.h5"
 pdf   = NReco.read_abc(fname)
 dconf = NReco.DetConf(0.3f0, 0.05f0, 2.0f0, 100.0f0, 5000.0f0, 7)
 sxyz  = pdf.sensor_xyz
@@ -72,4 +73,19 @@ end
     corrzphi2   = filter(c -> !any(f -> f(c), filter_func), getfield.(result, :corrzphi2))
     @test all((corrzphi1 .<= 1.0) .& (corrzphi1 .>= -1.0))
     @test all((corrzphi2 .<= 1.0) .& (corrzphi2 .>= -1.0))
+end
+
+@testset "classify_events" begin
+    evt_keys   = [:total, :empty, :single, :prompt, :single_prompt, :good_prompt]
+    evt_counts = NReco.event_classifier([fname], dconf)
+    evt_fields = fieldnames(typeof(evt_counts))
+    @test length(evt_fields) == length(evt_keys)
+    @test all(in(evt_keys).(evt_fields))
+
+    @test evt_counts.total         == 20
+    @test evt_counts.empty         ==  7
+    @test evt_counts.single        == 11
+    @test evt_counts.prompt        ==  2
+    @test evt_counts.single_prompt == 11
+    @test evt_counts.good_prompt   ==  2
 end
