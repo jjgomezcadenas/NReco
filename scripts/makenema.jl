@@ -116,10 +116,9 @@ function parse_commandline()
     return parse_args(s)
 end
 
-function main()
+
+if abspath(PROGRAM_FILE) == @__FILE__
 	parsed_args = parse_commandline()
 	println("Running makenema with arguments", parsed_args)
 	makenema(parsed_args)
 end
-
-@time main()

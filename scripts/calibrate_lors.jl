@@ -101,4 +101,8 @@ function calibrate_lors()
         ATools.write_lors_hdf5(mlor_filename, true_mLor, "true_info")
     end
 end
-calibrate_lors()
+
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    calibrate_lors()
+end
