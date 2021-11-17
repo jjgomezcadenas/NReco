@@ -1,5 +1,5 @@
 using Pkg
-Pkg.activate("../")
+Pkg.activate(normpath(joinpath(@__DIR__, "..")))
 
 using ATools
 using NReco
@@ -67,7 +67,8 @@ function calibrate_lors()
     t2 = ATools.interaction_time(units_ndfq, :r2x, :ta2, rmax, conf.cal_func.nLXe)
 
     # Calculate LORs.
-    mLor = ATools.MlemLor.((t2 - t1) ./ps, xint1, yint1, zint1, xint2, yint2, zint2)
+    mLor = ATools.MlemLor.((t2 - t1) ./ps, xint1, yint1, zint1, xint2, yint2, zint2,
+        units_ndfq[!, :q1], units_ndfq[!, :q2], units_ndfq[!, :E1], units_ndfq[!, :E2])
     # Will want a dataset/table with metadata too, to be decided.
     mlor_filename = joinpath(path_out, conf.conf_dir[1:end-1] * "_mlor.h5")
     ATools.write_lors_hdf5(mlor_filename, mLor)
@@ -76,7 +77,8 @@ function calibrate_lors()
         flight2   = ATools.time_of_flight(units_ndfq, [:xs, :ys, :zs], [:xt2, :yt2, :zt2])
         dt        = flight2 - flight1
         true_mLor = ATools.MlemLor.(dt ./ ps, ndfq.xt1, ndfq.yt1, ndfq.zt1,
-            ndfq.xt2, ndfq.yt2, ndfq.zt2)
+            ndfq.xt2, ndfq.yt2, ndfq.zt2,
+            units_ndfq[!, :q1], units_ndfq[!, :q2], units_ndfq[!, :E1], units_ndfq[!, :E2])
         mlor_filename = joinpath(path_out, conf.conf_dir[1:end-1] * "_Truemlor.h5")
         ATools.write_lors_hdf5(mlor_filename, true_mLor, "true_info")
     end
