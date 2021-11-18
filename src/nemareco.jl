@@ -5,23 +5,28 @@ using ATools
 
 
 """
-	true_xyz(b1::Hit, b2::Hit, df1::DataFrame, df2::DataFrame)
+	true_int(b1::Hit, b2::Hit, df1::DataFrame, df2::DataFrame)
 
-Return the sorted distance between baricenter and true
+Return the true positions and interaction energies for
+each hemisphers's interaction.
 """
-function true_xyz(b1::Hit, df1::DataFrame, df2::DataFrame)
+function true_int(b1::Hit, df1::DataFrame, df2::DataFrame)
 	# distance between baricenter and true
 	d1 = dxyz([b1.x, b1.y, b1.z], [df1.x[1], df1.y[1], df1.z[1]])
 	d2 = dxyz([b1.x, b1.y, b1.z], [df2.x[1], df2.y[1], df2.z[1]])
 
 	if d2 < d1
 		xt2 = [df1.x[1], df1.y[1], df1.z[1]]
+		Et2 = df1.pre_KE[1]
 		xt1 = [df2.x[1], df2.y[1], df2.z[1]]
+		Et1 = df2.pre_KE[1]
 	else
 		xt1 = [df1.x[1], df1.y[1], df1.z[1]]
+		Et1 = df1.pre_KE[1]
 		xt2 = [df2.x[1], df2.y[1], df2.z[1]]
+		Et2 = df2.pre_KE[1]
 	end
-	return xt1, xt2
+	return xt1, Et1, xt2, Et2
 end
 
 
@@ -102,7 +107,7 @@ function recovent(event     ::Integer,
 	end
 
 	# find true position (and correlate with barycenter)
-	xt1, xt2 = true_xyz(b1, df1, df2)
+	xt1, Et1, xt2, Et2 = true_int(b1, df1, df2)
 	@info " True position in hemisphere 1" xt1
 	@info " True position in hemisphere 2" xt2
 
@@ -160,6 +165,9 @@ function recovent(event     ::Integer,
 	# total charge
 	q1 = sum(hq1df.q),
 	q2 = sum(hq2df.q),
+	# Gamma energy at interaction
+	E1 = Et1,
+	E2 = Et2,
 	# True interaction positions
 	xt1 = xt1[1],
 	yt1 = xt1[2],
@@ -251,6 +259,7 @@ Return the evtdf DataFrame
 
    nsipm1  => Number of sipms in hemisphere 1 (nsipm2 for hemisphere 2)
    q1      => Total charge in hemisphere
+   E1      => Energy of the gamma at interaction.
    r1      => True radius, gamma interaction point,
    phistd  =>  Phi standard deviations (weigthed by charge)
    zstd    => Z standard deviations (weigthed by charge)

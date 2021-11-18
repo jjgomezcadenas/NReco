@@ -56,7 +56,7 @@ end
 
 @testset "nemareco" begin
     exp_keys = [:event_id, :phot1, :phot2, :nsipm1, :nsipm2, :q1, :q2,
-	            :r1,  :r2, :r1x, :r2x,
+	            :E1, :E2, :r1,  :r2, :r1x, :r2x,
                 :phistd1, :zstd1, :widz1, :widphi1, :corrzphi1,
                 :phistd2, :zstd2, :widz2, :widphi2, :corrzphi2,
 			    :xs, :ys, :zs, :ux, :uy, :uz, :xt1, :yt1, :zt1,
