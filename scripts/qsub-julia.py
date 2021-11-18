@@ -55,13 +55,15 @@ for _ in range(number_of_small_jobs):
 
 width = len(str(job_file_ranges[-1][-1]))
 
+julia_app = subprocess.run("which julia", shell=True, stdout=subprocess.PIPE).stdout[:-1]
+
 template = """#!/bin/bash
 #PBS -N {basename_dir_out}-{first}-{last}
 #PBS -l nodes=1:ppn=1
 #cd $PBS_O_WORKDIR
 cd {launch_dir}
 
-/software/julia-1.6.1/bin/julia {program} -d {dir_in} -o {dir_out} -x evtdf-{first:0{width}}-{last:0{width}}.h5 -i {first} -l {last} {other_args}
+{julia_app} {program} -d {dir_in} -o {dir_out} -x evtdf-{first:0{width}}-{last:0{width}}.h5 -i {first} -l {last} {other_args}
 """
 
 output_directory = args.dir_out
@@ -75,7 +77,8 @@ os.chdir(join(output_directory, 'qsub'))
 
 for i, l in job_file_ranges:
     qsub_script_name = f'qsub-{i:0{width}}-{l:0{width}}.sh'
-    qsub_script = template.format(first=i, last=l,
+    qsub_script = template.format(julia_app=julia_app.decode("UTF-8"),
+                                  first=i, last=l,
                                   dir_in           = args.dir_in,
                                   dir_out          = output_directory,
                                   launch_dir       = launch_dir,
