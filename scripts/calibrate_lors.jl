@@ -11,7 +11,7 @@ using Glob
 using HDF5
 using Unitful
 
-import Unitful: ps, mm
+import Unitful: ns, mm
 
 
 function define_paths(config::NReco.CalConfig)
@@ -67,7 +67,8 @@ function calibrate_lors()
     t2 = ATools.interaction_time(units_ndfq, :r2x, :ta2, rmax, conf.cal_func.nLXe)
 
     # Calculate LORs.
-    mLor = ATools.MlemLor.((t2 - t1) ./ps, xint1, yint1, zint1, xint2, yint2, zint2,
+    dt   = uconvert.(ns, t2 - t1) ./ ns
+    mLor = ATools.MlemLor.(dt, xint1, yint1, zint1, xint2, yint2, zint2,
         units_ndfq[!, :q1], units_ndfq[!, :q2], units_ndfq[!, :E1], units_ndfq[!, :E2])
     # Will want a dataset/table with metadata too, to be decided.
     mlor_filename = joinpath(path_out, conf.conf_dir[1:end-1] * "_mlor.h5")
@@ -75,8 +76,8 @@ function calibrate_lors()
     if confArgs["trueout"]
         flight1   = ATools.time_of_flight(units_ndfq, [:xs, :ys, :zs], [:xt1, :yt1, :zt1])
         flight2   = ATools.time_of_flight(units_ndfq, [:xs, :ys, :zs], [:xt2, :yt2, :zt2])
-        dt        = flight2 - flight1
-        true_mLor = ATools.MlemLor.(dt ./ ps, ndfq.xt1, ndfq.yt1, ndfq.zt1,
+        dt        = uconvert.(ns, flight2 - flight1) ./ ns
+        true_mLor = ATools.MlemLor.(dt, ndfq.xt1, ndfq.yt1, ndfq.zt1,
             ndfq.xt2, ndfq.yt2, ndfq.zt2,
             units_ndfq[!, :q1], units_ndfq[!, :q2], units_ndfq[!, :E1], units_ndfq[!, :E2])
         mlor_filename = joinpath(path_out, conf.conf_dir[1:end-1] * "_Truemlor.h5")
