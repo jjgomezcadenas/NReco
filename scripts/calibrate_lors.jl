@@ -24,7 +24,7 @@ function define_paths(config::NReco.CalConfig)
 end
 
 
-function calibrate_lors()
+function parse_commandline()
     s = ArgParseSettings()
 
     @add_arg_table s begin
@@ -45,12 +45,13 @@ function calibrate_lors()
             default  = "default"
     end
     confArgs     = parse_args(s)
+end
 
-    conf         = from_toml(NReco.CalConfig, confArgs["conf"])
 
-
-    (path_in ,
-     path_out)   = define_paths(conf)
+function calibrate_lors(confArgs::Dict{String, Any},
+                        conf    ::NReco.CalConfig  ,
+                        path_in ::String           ,
+                        path_out::String           )
 
      if confArgs["output-file"] == "default"
          outfile = joinpath(path_out, conf.conf_dir[1:end-1])
@@ -104,5 +105,8 @@ end
 
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    calibrate_lors()
+    cline_args        = parse_commandline()
+    conf              = from_toml(NReco.CalConfig, cline_args["conf"])
+    path_in, path_out = define_paths(conf)
+    calibrate_lors(cline_args, conf, path_in, path_out)
 end
