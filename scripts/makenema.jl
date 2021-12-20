@@ -1,5 +1,7 @@
-using Pkg
-Pkg.activate(normpath(joinpath(@__DIR__, "..")))
+if abspath(PROGRAM_FILE) == @__FILE__
+	using Pkg
+	Pkg.activate(normpath(joinpath(@__DIR__, "..")))
+end
 
 using ATools
 using NReco
