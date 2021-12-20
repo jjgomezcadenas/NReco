@@ -20,13 +20,14 @@ old_logger = global_logger(logger)
 
 function makenema(args)
 
-	lorf    = args["loralgo"]
-	detconf = args["detconf"]
-	dr      = args["dir"]
-	outd    = args["odir"]
-	outf    = args["ofile"]
-	file_i  = args["filei"]
-	file_l  = args["filel"]
+	lorf      = args["loralgo"]
+	detconf   = args["detconf"]
+	dr        = args["dir"]
+	f_pattern = args["pattern"]
+	outd      = args["odir"]
+	outf      = args["ofile"]
+	file_i    = args["filei"]
+	file_l    = args["filel"]
 
 	lor_algo = NReco.lor_kmeans
 	if lorf == "lor_qmax"
@@ -36,11 +37,11 @@ function makenema(args)
 	if isdir(outd) == false
 		mkdir(outd)
 	end
-	output = string(outd,"/", outf)
+	output = joinpath(outd, outf)
 
 	## Patch here so we can read actually select in a directory which
 	## is already partially processed. Needs to be improved in general.
-	files  = sort(glob("*.h5", dr), by=x->parse(Int64, split(x, "-")[end][1:end-3]))
+	files  = sort(glob(f_pattern, dr), by=x->parse(Int64, split(x, "-")[end][1:end-3]))
 
 	if detconf != "default"
 		dconf = from_toml(NReco.DetConf, detconf)
