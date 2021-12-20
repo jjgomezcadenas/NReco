@@ -112,6 +112,31 @@ end
 
 
 ## Tests for executables
+include("../scripts/makenema.jl")
+@testset "makenema" begin
+    config = Dict(
+        "dir"     => "testdata/"  ,
+        "pattern" => fname[10:end],
+        "odir"    => tempdir()    ,
+        "ofile"   => "evtdf.h5"   ,
+        "filei"   => 1            ,
+        "filel"   => 1            ,
+        "loralgo" => "lor_kmeans" ,
+        "detconf" => "default"
+    )
+    makenema(config)
+
+    outfile = joinpath(config["odir"], config["ofile"])
+    @test isfile(outfile)
+    h5open(outfile) do h5test
+        @test haskey(h5test                   , "configuration"   )
+        @test haskey(h5test["configuration"]  , "RunConfiguration")
+        @test haskey(h5test                   , "selected_events" )
+        @test haskey(h5test["selected_events"], "EventParameters" )
+    end
+end
+
+
 include("../scripts/makeEventTable.jl")
 @testset "makeEventTable" begin
     config = Dict(
