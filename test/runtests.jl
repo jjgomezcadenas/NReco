@@ -1,12 +1,14 @@
 using NReco
 using ATools
-using Test
+
 using DataFrames
 using Distributions
-using Statistics
+using HDF5
 using Logging
-using DataFrames
-#using StatsModels
+using Statistics
+
+using Test
+
 # Lower function verbosity
 logger = global_logger(SimpleLogger(stdout, Logging.Warn))
 
