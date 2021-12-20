@@ -18,19 +18,20 @@ logger = SimpleLogger(stdout, Logging.Warn)
 old_logger = global_logger(logger)
 
 function makezoo(args)
-	dr      = args["dir"]
-	outd    = args["odir"]
-	outf    = args["ofile"]
-	file_i  = args["filei"]
-	file_l  = args["filel"]
-	detconf = args["config"]
+	dr        = args["dir"]
+	f_pattern = args["pattern"]
+	outd      = args["odir"]
+	outf      = args["ofile"]
+	file_i    = args["filei"]
+	file_l    = args["filel"]
+	detconf   = args["config"]
 
 	if isdir(outd) == false
 		mkdir(outd)
 	end
 
 	output_path = joinpath(outd, outf)
-	filenames   = glob("*.h5",dr)
+	filenames   = glob(f_pattern,dr)
 
 	if detconf != "default"
 		dconf = from_toml(NReco.DetConf, detconf)
