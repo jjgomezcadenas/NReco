@@ -60,26 +60,30 @@ function parse_commandline()
 
     @add_arg_table s begin
         "--dir", "-d"
-            help = "directory with nema simulations"
+            help     = "directory with nema simulations"
             arg_type = String
+		"--pattern", "-p"
+			help     = "Input file pattern to match"
+			arg_type = String
+			default  = "*.h5"
 		"--odir", "-o"
-            help = "output directory"
+            help     = "output directory"
             arg_type = String
 		"--ofile", "-x"
-            help = "output file"
+            help     = "output file"
             arg_type = String
-            default = "evtdf.csv"
+            default  = "evtdf.h5"
 		"--filei", "-i"
-	        help = "number of initial file in glob list"
+	        help     = "number of initial file in glob list"
 	        default  = 1
 			arg_type = Int
 		"--filel", "-l"
-		    help = "number of last file in glob list"
+		    help     = "number of last file in glob list"
 		    default  = 1
 			arg_type = Int
 		"--config", "-c"
-			help = "detector configuration"
-			default = "default"
+			help     = "detector configuration"
+			default  = "default"
 			arg_type = String
     end
 
