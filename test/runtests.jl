@@ -112,6 +112,28 @@ end
 
 
 ## Tests for executables
+include("../scripts/makeEventTable.jl")
+@testset "makeEventTable" begin
+    config = Dict(
+        "dir"     => "testdata/"  ,
+        "pattern" => fname[10:end],
+        "odir"    => tempdir()    ,
+        "ofile"   => "evtdf.h5"   ,
+        "filei"   => 1            ,
+        "filel"   => 1            ,
+        "config"  => "default"
+    )
+    makezoo(config)
+
+    outfile = joinpath(config["odir"], config["ofile"])
+    @test isfile(outfile)
+    h5open(outfile) do h5test
+        @test haskey(h5test               , "EventCounts")
+        @test haskey(h5test["EventCounts"], "counts"     )
+    end
+end
+
+
 include("../scripts/calibrate_lors.jl")
 @testset "calibrate_lors" begin
     config = Dict(
