@@ -39,6 +39,10 @@ function parse_commandline()
             help     = "Time parameter used: ta or tr"
             arg_type = String
             default  = "ta"
+        "--input-file", "-i"
+            help     = "Pattern for input"
+            arg_type = String
+            default  = "evt*.h5"
         "--output-file", "-o"
             help     = "Name of output file"
             arg_type = String
@@ -60,7 +64,7 @@ function calibrate_lors(confArgs::Dict{String, Any},
      end
 
     (nsim, rmin,
-     rmax, ndf ) = read_evtpar(glob("evt*.h5", path_in))
+     rmax, ndf ) = read_evtpar(glob(confArgs["input-file"], path_in))
 
     cal_func     = NReco.calibration_function(conf.cal_func, rmin, rmax)
 
@@ -101,6 +105,7 @@ function calibrate_lors(confArgs::Dict{String, Any},
         mlor_filename = outfile * "_Truemlor.h5"
         ATools.write_lors_hdf5(mlor_filename, true_mLor, "true_info")
     end
+    nothing
 end
 
 
