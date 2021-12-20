@@ -3,15 +3,16 @@ if abspath(PROGRAM_FILE) == @__FILE__
 	Pkg.activate(normpath(joinpath(@__DIR__, "..")))
 end
 
-using DataFrames
-using Configurations
-using HDF5
-using Glob
-using ArgParse
-using Logging
-using Printf
 using ATools
 using NReco
+
+using ArgParse
+using Configurations
+using DataFrames
+using Glob
+using HDF5
+using Logging
+using Printf
 
 logger = SimpleLogger(stdout, Logging.Warn)
 old_logger = global_logger(logger)
