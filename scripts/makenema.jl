@@ -88,31 +88,35 @@ function parse_commandline()
 
     @add_arg_table s begin
         "--dir", "-d"
-            help = "directory with nema simulations"
+            help     = "directory with nema simulations"
             arg_type = String
+		"--pattern", "-p"
+			help     = "Input file pattern to match"
+			arg_type = String
+			default  = "*.h5"
 		"--odir", "-o"
-            help = "output directory"
+            help     = "output directory"
             arg_type = String
 		"--ofile", "-x"
-            help = "output file"
+            help     = "output file"
             arg_type = String
-            default = "evtdf.h5"
+            default  = "evtdf.h5"
 		"--filei", "-i"
 	        help = "number of initial file in glob list"
 	        default  = 1
 			arg_type = Int
 		"--filel", "-l"
-		    help = "number of last file in glob list"
+		    help     = "number of last file in glob list"
 		    default  = 1
 			arg_type = Int
 		"--loralgo", "-g"
-			help = "algorithm to use for LOR reconstruction "
+			help     = "algorithm to use for LOR reconstruction "
 			arg_type = String
-			default = "lor_kmeans"
+			default  = "lor_kmeans"
 		"--detconf", "-c"
-			help = "Detector configuration"
+			help     = "Detector configuration"
 			arg_type = String
-			default = "default"
+			default  = "default"
     end
 
     return parse_args(s)
