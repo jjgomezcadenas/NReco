@@ -109,3 +109,50 @@ end
     @test evt_counts.single_prompt == 11
     @test evt_counts.good_prompt   ==  2
 end
+
+
+## Tests for executables
+include("../scripts/calibrate_lors.jl")
+@testset "calibrate_lors" begin
+    config = Dict(
+        "input-file"     => "n3-window-1m-LXe-20mm-1-20_reduced.h5",
+        "output-file"    => "n3-window-1m-LXe-20mm-1-20_reduced"   ,
+        "time-parameter" => "ta"                                   ,
+        "trueout"        => false
+    )
+    cal_conf = NReco.CalConfig(
+        input_dir = "testdata/",
+        conf_dir  = ""         ,
+        plot_dir  = tempdir()  ,
+        qmin      =  600.0f0   ,
+        qmax      = 2200.0f0   ,
+        cal_func  = NReco.CalFunction(
+                        cal_grp = "n3-20mm",
+                        cal_std = "cstd"
+                    )
+    )
+    path_in, path_out = define_paths(cal_conf)
+    calibrate_lors(config, cal_conf, path_in, path_out)
+
+    out_file = joinpath(path_out, config["output-file"] * "_mlor.h5")
+    @test isfile(out_file)
+    expected = DataFrame(:dt => Float32[   1.0083368, 0.20166937],
+                         :x1 => Float32[ 357.57245, 103.550095],
+                         :y1 => Float32[  33.63522 , -343.89935],
+                         :z1 => Float32[ 166.94383, -219.65816],
+                         :x2 => Float32[-230.92096, 143.3677],
+                         :y2 => Float32[-272.25385, -329.29483],
+                         :z2 => Float32[-197.30713, -231.62079],
+                         :q1 => Float32[1985.0, 607.0],
+                         :q2 => Float32[814.0, 919.0],
+                         :E1 => Float32[511.0, 511.0],
+                         :E2 => Float32[232.63318, 105.336716])
+    h5open(out_file) do h5test
+        @test haskey(h5test, "reco_info")
+        @test haskey(h5test["reco_info"], "lors")
+        lors = readh5_todf(h5test, "reco_info", "lors")
+        @test nrow(        lors ) ==  2
+        @test length(names(lors)) == 11
+        @test all(all.(eachrow(isapprox.(lors, expected))))
+    end
+end
