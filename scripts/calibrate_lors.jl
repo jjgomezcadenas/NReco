@@ -29,7 +29,7 @@ end
 function parse_commandline()
     s = ArgParseSettings()
 
-    @add_arg_table s begin
+    @add_arg_table! s begin
         "--conf", "-c"
             help     = "Calibration configuration"
 			arg_type = String
