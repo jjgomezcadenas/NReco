@@ -6,44 +6,60 @@ using StatsBase
 
 
 """
-	true_int(b1::Hit, b2::Hit, df1::DataFrame, df2::DataFrame)
+	true_interaction(b1     ::Hit          , b2      ::Hit         ,
+	                 volumes::Vector{Int64}, vertices::SubDataFrame)
 
-Return the true positions and interaction energies for
-each hemisphers's interaction.
+Extract MC truth information about the LXe interactions.
+Only considers vertices in volumes.
+Returns the df row for the vertex closes to the barycentre in each case.
 """
-function true_int(b1::Hit, df1::DataFrame, df2::DataFrame)
-	# distance between baricenter and true
-	d1 = dxyz([b1.x, b1.y, b1.z], [df1.x[1], df1.y[1], df1.z[1]])
-	d2 = dxyz([b1.x, b1.y, b1.z], [df2.x[1], df2.y[1], df2.z[1]])
-
-	if d2 < d1
-		xt2 = [df1.x[1], df1.y[1], df1.z[1]]
-		Et2 = df1.pre_KE[1]
-		xt1 = [df2.x[1], df2.y[1], df2.z[1]]
-		Et1 = df2.pre_KE[1]
-	else
-		xt1 = [df1.x[1], df1.y[1], df1.z[1]]
-		Et1 = df1.pre_KE[1]
-		xt2 = [df2.x[1], df2.y[1], df2.z[1]]
-		Et2 = df2.pre_KE[1]
+function true_interaction(b1::Hit, b2::Hit,
+	                      volumes::Vector{Int64},
+						  vertices::SubDataFrame)::Union{Nothing, Tuple{DataFrameRow, DataFrameRow}}
+	function dist_to_hit(h1::Hit)::Function
+		hit_xyz = getfield.((h1,), [:x, :y, :z])
+		function dist(x::Float32, y::Float32, z::Float32)::Float32
+			dxyz(hit_xyz, vcat(x, y, z))
+		end
+		return dist
 	end
-	return xt1, Et1, xt2, Et2
+
+	vrts = filter(df -> in(volumes).(df.volume_id), vertices)
+	try
+		vrts = combine(df -> df[argmin(df.t), :], groupby(vrts, :track_id))
+	catch
+		@warn "Warning, no valid MC true vertex for current event."
+		# TODO deal with these events correctly without getting weird rmin/rmax.
+		return nothing
+	end
+	
+	transform!(vrts, [:x, :y, :z] => ByRow(dist_to_hit(b1)) => :dist1,
+	                 [:x, :y, :z] => ByRow(dist_to_hit(b2)) => :dist2)
+
+	cols = [:process_id, :x, :y, :z, :pre_KE]
+	## Allow them to be the same for now, should only happen
+	## for bad reconstruction with no separation.
+	row1 = argmin(vrts.dist1)
+	row2 = argmin(vrts.dist2)
+
+	return vrts[row1, cols], vrts[row2, cols]
 end
 
 
 """
-	check_valid_hits(hitdf::DataFrame)
+	check_valid_hits(hitdf::DataFrame, event::Int64)
 
 Check the validity of the event hitmaps for continued processing
+Returns true only of hitdf not empty and has at least 2 rows.
 """
 function check_valid_hits(hitdf::Union{DataFrame, Nothing}, event::Int64)
 	if hitdf === nothing
-		@warn "Warning, hidtf evaluates to nothing for event = $event"
+		@warn "Warning, hitdf evaluates to nothing for event = $event"
 		return false
 	end
 
 	if nrow(hitdf) < 2
-		@warn "Warning, hidtf is <2 for event = $event"
+		@warn "Warning, hitdf is <2 for event = $event"
 		return false
 	end
 	return true
@@ -53,7 +69,9 @@ end
 """
 	check_valid_charge(h1::DataFrame, h2::DataFrame, dc::DetConf)
 
-Check if the hemispheres have detected charge above threshold
+Check if the hemispheres have detected charge above threshold.
+Requires that the sum of detected charge in each hemisphere
+be in (dc.qmin, dc.qmax).
 """
 function check_valid_charge(h1::DataFrame, h2::DataFrame, dc::DetConf)
 	q1 = sum(h1.q)
@@ -73,27 +91,27 @@ end
 
 
 """
-	recovent(event       ::Integer,
-	dc          		 ::DetConf,
-	df1         		 ::DataFrame,
-	df2         		 ::DataFrame,
-	primaries   		 ::SubDataFrame,
-	sensor_xyz  		 ::DataFrame,
-	waveform    		 ::SubDataFrame,
-	lor_algo    		 ::Function)
+	recovent(event     ::Integer      ,
+	         dc        ::DetConf      ,
+			 vertices  ::SubDataFrame ,
+			 primaries ::SubDataFrame ,
+			 sensor_xyz::DataFrame    ,
+			 volumes   ::Vector{Int64},
+			 waveform  ::SubDataFrame ,
+			 lor_algo  ::Function     )
 
 Return a dictionary with the variables characterising the event.
 """
 function recovent(event     ::Integer,
 		  dc        ::DetConf,
-		  df1       ::DataFrame,
-		  df2       ::DataFrame,
+		  vertices  ::SubDataFrame,
 		  primaries ::SubDataFrame,
 		  sensor_xyz::DataFrame,
+		  volumes   ::Vector{Int64},
 		  waveform  ::SubDataFrame,
 		  lor_algo  ::Function)
 	# hit dataframe
-	hitdf = recohits(event,sensor_xyz, waveform, dc.ecut, dc.pde, dc.sigma_tof)
+	hitdf = recohits(event, sensor_xyz, waveform, dc.ecut, dc.pde, dc.sigma_tof)
 
 	if !check_valid_hits(hitdf, event)
 		return nothing
@@ -108,9 +126,13 @@ function recovent(event     ::Integer,
 	end
 
 	# find true position (and correlate with barycenter)
-	xt1, Et1, xt2, Et2 = true_int(b1, df1, df2)
-	@info " True position in hemisphere 1" xt1
-	@info " True position in hemisphere 2" xt2
+	mc_truth = true_interaction(b1, b2, volumes, vertices)
+	if isnothing(mc_truth)
+		return mc_truth
+	end
+	df1, df2 = mc_truth
+	@info " True position in hemisphere 1" Array(df1[[:x, :y, :z]])
+	@info " True position in hemisphere 2" Array(df2[[:x, :y, :z]])
 
 	## Weights and phi positions
 	int1_weights = FrequencyWeights(hq1df.q)
@@ -118,8 +140,8 @@ function recovent(event     ::Integer,
 	int2_weights = FrequencyWeights(hq2df.q)
 	phi2_values  = fphi(hq2df)
 
-	true_rad1 = rxy(xt1[1], xt1[2])
-	true_rad2 = rxy(xt2[1], xt2[2])
+	true_rad1 = rxy(df1.x, df1.y)
+	true_rad2 = rxy(df2.x, df2.y)
 	# New (x,y) positions estimated from r1, r2
 	xyz1 = radial_correction(b1, true_rad1)
 	xyz2 = radial_correction(b2, true_rad2)
@@ -145,8 +167,8 @@ function recovent(event     ::Integer,
 
 	reduced_event = ATools.EventParameters(
 	event_id=event,
-	phot1 = df1.process_id[1] == 1,
-	phot2 = df2.process_id[1] == 1,
+	phot1 = df1.process_id == 1,
+	phot2 = df2.process_id == 1,
 	# Primary particle origins
 	xs = primaries.x[1],
 	ys = primaries.y[1],
@@ -167,24 +189,24 @@ function recovent(event     ::Integer,
 	q1 = sum(hq1df.q),
 	q2 = sum(hq2df.q),
 	# Gamma energy at interaction
-	E1 = Et1,
-	E2 = Et2,
+	E1 = df1.pre_KE,
+	E2 = df2.pre_KE,
 	# True interaction positions
-	xt1 = xt1[1],
-	yt1 = xt1[2],
-	zt1 = xt1[3],
+	xt1 = df1.x,
+	yt1 = df1.y,
+	zt1 = df1.z,
 	t1  = tmin1,
 	tr1 = minimum(hq1df.trmin),
-	xt2 = xt2[1],
-	yt2 = xt2[2],
-	zt2 = xt2[3],
+	xt2 = df2.x,
+	yt2 = df2.y,
+	zt2 = df2.z,
 	t2  = tmin2,
 	tr2 = minimum(hq2df.trmin),
 	# find r1 and r2 (from True info)
 	r1 = true_rad1,
 	r2 = true_rad2,
 	# Compute phistd and zstd of detected light
-	phistd1  = std(phi1_values, int1_weights, corrected=true),
+	phistd1   = std(phi1_values, int1_weights, corrected=true),
 	zstd1     = std(hq1df.z   , int1_weights, corrected=true),
 	widz1     = maximum(hq1df.z) - minimum(hq1df.z),
 	widphi1   = maximum(phi1_values) - minimum(phi1_values),
@@ -217,29 +239,29 @@ end
 
 
 """
-	nema_analysis!(     data_vec    ::Vector{ATools.EventParameters},
-						event       ::Integer,
-						dc          ::DetConf,
-						df1         ::DataFrame,
-						df2         ::DataFrame,
-						primaries   ::SubDataFrame,
-						sensor_xyz  ::DataFrame,
-						waveform    ::SubDataFrame,
-						lor_algo    ::Function)
+	nema_analysis!(data_vec  ::Vector{ATools.EventParameters},
+				   event     ::Integer,
+				   dc        ::DetConf,
+				   sensor_xyz::DataFrame,
+				   volumes   ::Vector{Int64},
+				   waveform  ::SubDataFrame,
+				   primaries ::SubDataFrame,
+				   vertices  ::SubDataFrame,
+				   lor_algo  ::Function)
 
 Fill the DataFrame for nema analysis
 """
 function nema_dict!(data_vec      ::Vector{ATools.EventParameters}   ,
 		    event     ::Integer     ,
 		    dc        ::DetConf     ,
-		    df1       ::DataFrame   ,
-		    df2       ::DataFrame   ,
-		    primaries ::SubDataFrame,
-		    sensor_xyz::DataFrame   ,
-		    waveform  ::SubDataFrame,
-		    lor_algo  ::Function    )
+			sensor_xyz::DataFrame   ,
+			volumes   ::Vector{Int64},
+			waveform  ::SubDataFrame,
+			primaries ::SubDataFrame,
+			vertices  ::SubDataFrame,
+			lor_algo  ::Function    )
 
-	result = recovent(event, dc, df1, df2, primaries, sensor_xyz, waveform, lor_algo)
+	result = recovent(event, dc, vertices, primaries, sensor_xyz, volumes, waveform, lor_algo)
 
 	if result !== nothing
 		push!(data_vec, result[3])
@@ -287,39 +309,26 @@ function nemareco(files    ::Vector{String},
 	output_vector = ATools.EventParameters[]
 	total_events  = 0
 
-	for file in files[file_i:file_l]               # loop on files
+	for file in files[file_i:file_l]
 		println("reading file = ", file)
-		pdf = read_abc(file)            # read file
+		pdf = read_abc(file)
 
 		# count the total number of events generated.
 		# This, like many other sections assumes primary generation of gammas.
 		total_events += nrow(pdf.primaries)
 
-		dfs = primary_in_lxe(pdf.vertices)       # primary photons in LXe
-
-		## We are interested in events with two primary photons in LXe
-		grp_dfs = filter(x -> any(x.track_id .== 1) && any(x.track_id .== 2),
-							groupby(dfs, :event_id))
+		vertices  = groupby(filter(df -> df.parent_id .== 0, pdf.vertices), :event_id)
 		primaries = groupby(pdf.primaries, :event_id)
 		waveforms = groupby(pdf.waveform , :event_id)
+		## For true vertex saving, can have detected charge from
+		## gamma vertices in LXe and Steel_1 (naming stable?)
+		volumes   = findall((pdf.volume_names .==     "LXe") .|
+							(pdf.volume_names .== "Steel_1")   ) .- 1
 
-		for (event, vdf) in pairs(grp_dfs)
-			df1 = vdf[vdf.track_id .== 1, :]
-			df2 = vdf[vdf.track_id .== 2, :]
-
-			try
-				wvf = waveforms[values(event)]
-				nema_dict!(output_vector, event.event_id, dconf, df1, df2,
-					   primaries[values(event)], pdf.sensor_xyz,
-					   wvf, lor_algo)
-			catch err
-				if err isa KeyError
-					continue
-				else
-					rethrow(err)
-				end
-			end
-    	end
+		for (event, wvf) in pairs(waveforms)
+			nema_dict!(output_vector, event.event_id, dconf, pdf.sensor_xyz, volumes,
+			wvf, primaries[values(event)], vertices[values(event)], lor_algo)
+		end
 	end
 	return total_events, output_vector
 end
