@@ -37,6 +37,24 @@ vdf   = pdf.vertices
     @test wevt.sensor_id[i] == imx
 end
 
+@testset "images" begin
+    img_file = "testdata/imgtest.raw"
+    img_pix, img_size, img_data = NReco.read_img(img_file)
+    @test all(img_pix .== [51, 51, 101])
+    @test all(isapprox.(img_size, [50.0f0, 50.0f0, 100.0f0]))
+    @test all(img_pix .== size(img_data))
+
+    fom_file = "testdata/fom_smagicFV_vac_steel"
+    fom_df   = NReco.read_foms(fom_file)
+    @test nrow(fom_df) == 6
+    @test ncol(fom_df) == 4
+
+    allfom_file = "testdata/allFoms_smagicFV_vac_steel"
+    allfom_df   = NReco.read_allfoms(allfom_file)
+    @test nrow(allfom_df) == 30
+    @test ncol(allfom_df) == 19
+end
+
 @testset "recof" begin
     @test all(NReco.primary_in_lxe(vdf).parent_id .== 0)
 
