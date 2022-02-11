@@ -29,10 +29,9 @@ end
 
 Return the dot product between each SiPM in the event and the SiPM of max charge
 """
-function xyz_dot(hitdf::DataFrame, simax::Hit)
-	xyzmax = [simax.x, 	simax.y, simax.z]
-	xyzm_dot = dot(xyzmax, xyzmax)
-	return [dot(Array(hitdf[i,1:3]), xyzmax) /xyzm_dot  for i in 1:nrow(hitdf)]
+function xyz_dot(hitdf::DataFrame, simax::DataFrameRow)
+	xyzmax = simax[[:x, :y, :z]]
+	return dot.(eachrow(hitdf[!, [:x, :y, :z]]), Ref(xyzmax))
 end
 
 
@@ -53,8 +52,7 @@ Return the coordinates of the SiPM with maximum charge
 
 """
 function find_xyz_sipm_qmax(hitdf::DataFrame)
-	indx, xmax, qxmax = find_max_xy(hitdf, "x", "q")
-	return Hit(xmax, hitdf.y[indx], hitdf.z[indx], qxmax)
+	hitdf[argmax(hitdf.q), :]
 end
 
 
@@ -65,9 +63,10 @@ Return two data frames, separating the SiPMs in two groups depending on
 the sign of the angle with the SiPM of max charge
 """
 function sipmsel(hdf::DataFrame)
-	simax = find_xyz_sipm_qmax(hdf)
-	npr   = xyz_dot(hdf, simax)
-	return hdf[(npr.>0), :], hdf[(npr.<0), :]
+	simaxq = find_xyz_sipm_qmax(hdf)
+	npr    = xyz_dot(hdf, simaxq)
+	mask   = npr .> 0
+	return hdf[mask, :], hdf[.!mask, :]
 end
 
 
