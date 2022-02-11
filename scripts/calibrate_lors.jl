@@ -65,7 +65,7 @@ function calibrate_lors(confArgs::Dict{String, Any},
          outfile = joinpath(path_out, confArgs["output-file"])
      end
 
-    (nsim, rmin,
+    (_   , rmin,
      rmax, ndf ) = read_evtpar(glob(confArgs["input-file"], path_in))
 
     cal_func     = NReco.calibration_function(conf.cal_func, rmin, rmax)
@@ -75,8 +75,6 @@ function calibrate_lors(confArgs::Dict{String, Any},
     NReco.calculate_interaction_radius!(ndfq, cal_func, conf.cal_func.cal_std, rmax)
 
     # We need/want units here. More generalised use of units should be implemented.
-    ## Get the true interaction radius (Why not saved?)
-    transform!(ndfq, [:xt1, :yt1] => ByRow(rxy) => :rt1, [:xt2, :yt2] => ByRow(rxy) => :rt2)
     units_ndfq = ATools.set_units(ndfq)
 
     # Calculate the x, y, z of the interaction.
