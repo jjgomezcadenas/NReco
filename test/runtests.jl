@@ -58,6 +58,19 @@ end
 end
 
 @testset "recof" begin
+    test_rad = 360.0f0
+    test_xyz = Float32[test_rad * cos(pi / 4), test_rad * sin(pi / 4), 30.0f0]
+    test_hit = NReco.Hit(test_xyz..., 2.0f0)
+    rad_corr = NReco.radial_correction(test_hit, test_rad)
+    @test all(isapprox.(rad_corr, test_xyz))
+
+    wvf1 = first(groupby(wfm, :event_id))
+    wvf1 = combine(groupby(wvf1, :sensor_id), nrow => :q)
+    wvf1 = leftjoin(wvf1, sxyz, on=:sensor_id)
+    disallowmissing!(wvf1, [:x, :y, :z])
+    @test NReco.phistd(wvf1) > 0.0
+    @test NReco.xyzstd(wvf1, "x") > 0.0
+
     @test all(NReco.primary_in_lxe(vdf).parent_id .== 0)
 
     df          = DataFrame(:q1=>Float32[100.0, 120.5, 132.6],

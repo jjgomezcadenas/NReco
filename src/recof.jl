@@ -151,11 +151,7 @@ Take the estimated radius of interaction (r), and the radius of the sipm
 and return the corrected positions
 """
 function radial_correction(b::Hit, r::Float32)
-
-	ϕ = atan(b.y,b.x)
-    x = r .* cos.(ϕ)
-    y = r .* sin.(ϕ)
-    return x,y,b.z
+	return ATools.calculate_xy(b.x, b.y, r)..., b.z
 end
 
 
@@ -167,7 +163,7 @@ Sqrt(1/Q Sum_i (phi_i - phi_mean) * qi )
 """
 function phistd(hitdf::DataFrame)
 	phi = fphi(hitdf)
-	return wstd(phi, hitdf.q)
+	return std(phi, FrequencyWeights(hitdf.q), corrected=true)
 end
 
 
@@ -179,7 +175,7 @@ Sqrt(1/Q Sum_i (phi_i - phi_mean) * qi )
 """
 function xyzstd(hitdf::DataFrame, column::String="x")
 	x = hitdf[!, column]
-	return wstd(x, hitdf.q)
+	return std(x, FrequencyWeights(hitdf.q), corrected=true)
 end
 
 
