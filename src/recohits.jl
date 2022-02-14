@@ -22,12 +22,7 @@ function recohits(event     ::Integer,
 		  pde       ::Float32,
 		  sigma_tof ::Float32)
 
-  	# select the waveform of this event
-	# if nrow(waveform) == 0
-	# 	return nothing
-	# end
-
-	# Filter according to probability and PDE (pass if prob < pde)
+  	# Filter according to probability and PDE (pass if prob < pde)
 	wfm = waveform[rand(Float32, nrow(waveform)) .< pde, :]
 
 	@debug "event =$event, waveform dataframe: size =$(size(wfm))"
