@@ -135,11 +135,8 @@ end
 	returns the barycenter of a cluster of hits
 """
 function baricenter(hdf::DataFrame)
-	function xq(hdf::DataFrame, pos::String)
-		return sum(hdf[!,pos] .* hdf.q) / qt
-	end
-	qt = sum(hdf.q)
-	return Hit(xq(hdf, "x"), xq(hdf, "y"), xq(hdf, "z"), qt)
+	xyzmeans = mean(Matrix(hdf[!, [:x, :y, :z]]), weights(hdf.q), dims=1)
+	return Hit(xyzmeans[1], xyzmeans[2], xyzmeans[3], sum(hdf.q))
 end
 
 
