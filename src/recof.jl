@@ -89,9 +89,9 @@ Given the dataframe hitdf (with fields x,y,z), return the
 underlying matrix
 """
 function get_hits_as_matrix(hitdf::DataFrame)
-	f = @formula(0 ~ x + y + z)
-	f2 = apply_schema(f, schema(f, hitdf))
-	resp, pred = modelcols(f2, hitdf)
+	f       = @formula(0 ~ x + y + z)
+	f2      = apply_schema(f, schema(f, hitdf))
+	_, pred = modelcols(f2, hitdf)
 	return transpose(pred)
 end
 
@@ -119,9 +119,9 @@ Returns two estimations of vertices. One based in pure kmeans, the
 other in barycenter.
 """
 function lor_kmeans(hitdf::DataFrame)
-	Mhits = get_hits_as_matrix(hitdf)  # take the underlying matrix
-	kr = kmeans(Mhits, 2)              # apply kmeans
-	ka = assignments(kr) # get the assignments of points to clusters
+	Mhits = Matrix(hitdf[!, [:x, :y, :z]])
+	kr    = kmeans(transpose(Mhits), 2)
+	ka    = assignments(kr)
 
 	hq2df, hq1df = ksipmsel(hitdf, ka)   # select using kmeans list
 	b1 = baricenter(hq1df)     # baricenters
