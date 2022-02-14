@@ -1,33 +1,37 @@
-using Pkg
-Pkg.activate(normpath(joinpath(@__DIR__, "..")))
+if abspath(PROGRAM_FILE) == @__FILE__
+	using Pkg
+	Pkg.activate(normpath(joinpath(@__DIR__, "..")))
+end
 
-using DataFrames
-using Configurations
-using HDF5
-using Glob
-using ArgParse
-using Logging
-using Printf
 using ATools
 using NReco
+
+using ArgParse
+using Configurations
+using DataFrames
+using Glob
+using HDF5
+using Logging
+using Printf
 
 logger = SimpleLogger(stdout, Logging.Warn)
 old_logger = global_logger(logger)
 
 function makezoo(args)
-	dr      = args["dir"]
-	outd    = args["odir"]
-	outf    = args["ofile"]
-	file_i  = args["filei"]
-	file_l  = args["filel"]
-	detconf = args["config"]
+	dr        = args["dir"]
+	f_pattern = args["pattern"]
+	outd      = args["odir"]
+	outf      = args["ofile"]
+	file_i    = args["filei"]
+	file_l    = args["filel"]
+	detconf   = args["config"]
 
 	if isdir(outd) == false
 		mkdir(outd)
 	end
 
 	output_path = joinpath(outd, outf)
-	filenames   = glob("*.h5",dr)
+	filenames   = glob(f_pattern,dr)
 
 	if detconf != "default"
 		dconf = from_toml(NReco.DetConf, detconf)
@@ -55,38 +59,41 @@ end
 function parse_commandline()
     s = ArgParseSettings()
 
-    @add_arg_table s begin
+    @add_arg_table! s begin
         "--dir", "-d"
-            help = "directory with nema simulations"
+            help     = "directory with nema simulations"
             arg_type = String
+		"--pattern", "-p"
+			help     = "Input file pattern to match"
+			arg_type = String
+			default  = "*.h5"
 		"--odir", "-o"
-            help = "output directory"
+            help     = "output directory"
             arg_type = String
 		"--ofile", "-x"
-            help = "output file"
+            help     = "output file"
             arg_type = String
-            default = "evtdf.csv"
+            default  = "evtdf.h5"
 		"--filei", "-i"
-	        help = "number of initial file in glob list"
+	        help     = "number of initial file in glob list"
 	        default  = 1
 			arg_type = Int
 		"--filel", "-l"
-		    help = "number of last file in glob list"
+		    help     = "number of last file in glob list"
 		    default  = 1
 			arg_type = Int
 		"--config", "-c"
-			help = "detector configuration"
-			default = "default"
+			help     = "detector configuration"
+			default  = "default"
 			arg_type = String
     end
 
     return parse_args(s)
 end
 
-function main()
+
+if abspath(PROGRAM_FILE) == @__FILE__
 	parsed_args = parse_commandline()
 	println("Running makezoo with arguments", parsed_args)
 	makezoo(parsed_args)
 end
-
-@time main()

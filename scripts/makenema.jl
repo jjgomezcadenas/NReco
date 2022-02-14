@@ -1,5 +1,7 @@
-using Pkg
-Pkg.activate(normpath(joinpath(@__DIR__, "..")))
+if abspath(PROGRAM_FILE) == @__FILE__
+	using Pkg
+	Pkg.activate(normpath(joinpath(@__DIR__, "..")))
+end
 
 using ATools
 using NReco
@@ -18,13 +20,14 @@ old_logger = global_logger(logger)
 
 function makenema(args)
 
-	lorf    = args["loralgo"]
-	detconf = args["detconf"]
-	dr      = args["dir"]
-	outd    = args["odir"]
-	outf    = args["ofile"]
-	file_i  = args["filei"]
-	file_l  = args["filel"]
+	lorf      = args["loralgo"]
+	detconf   = args["detconf"]
+	dr        = args["dir"]
+	f_pattern = args["pattern"]
+	outd      = args["odir"]
+	outf      = args["ofile"]
+	file_i    = args["filei"]
+	file_l    = args["filel"]
 
 	lor_algo = NReco.lor_kmeans
 	if lorf == "lor_qmax"
@@ -34,11 +37,11 @@ function makenema(args)
 	if isdir(outd) == false
 		mkdir(outd)
 	end
-	output = string(outd,"/", outf)
+	output = joinpath(outd, outf)
 
 	## Patch here so we can read actually select in a directory which
 	## is already partially processed. Needs to be improved in general.
-	files  = sort(glob("*.h5", dr), by=x->parse(Int64, split(x, "-")[end][1:end-3]))
+	files  = sort(glob(f_pattern, dr), by=x->parse(Int64, split(x, "-")[end][1:end-3]))
 
 	if detconf != "default"
 		dconf = from_toml(NReco.DetConf, detconf)
@@ -84,42 +87,45 @@ end
 function parse_commandline()
     s = ArgParseSettings()
 
-    @add_arg_table s begin
+    @add_arg_table! s begin
         "--dir", "-d"
-            help = "directory with nema simulations"
+            help     = "directory with nema simulations"
             arg_type = String
+		"--pattern", "-p"
+			help     = "Input file pattern to match"
+			arg_type = String
+			default  = "*.h5"
 		"--odir", "-o"
-            help = "output directory"
+            help     = "output directory"
             arg_type = String
 		"--ofile", "-x"
-            help = "output file"
+            help     = "output file"
             arg_type = String
-            default = "evtdf.h5"
+            default  = "evtdf.h5"
 		"--filei", "-i"
 	        help = "number of initial file in glob list"
 	        default  = 1
 			arg_type = Int
 		"--filel", "-l"
-		    help = "number of last file in glob list"
+		    help     = "number of last file in glob list"
 		    default  = 1
 			arg_type = Int
 		"--loralgo", "-g"
-			help = "algorithm to use for LOR reconstruction "
+			help     = "algorithm to use for LOR reconstruction "
 			arg_type = String
-			default = "lor_kmeans"
+			default  = "lor_kmeans"
 		"--detconf", "-c"
-			help = "Detector configuration"
+			help     = "Detector configuration"
 			arg_type = String
-			default = "default"
+			default  = "default"
     end
 
     return parse_args(s)
 end
 
-function main()
+
+if abspath(PROGRAM_FILE) == @__FILE__
 	parsed_args = parse_commandline()
 	println("Running makenema with arguments", parsed_args)
 	makenema(parsed_args)
 end
-
-@time main()

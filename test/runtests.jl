@@ -1,12 +1,14 @@
 using NReco
 using ATools
-using Test
+
 using DataFrames
 using Distributions
-using Statistics
+using HDF5
 using Logging
-using DataFrames
-#using StatsModels
+using Statistics
+
+using Test
+
 # Lower function verbosity
 logger = global_logger(SimpleLogger(stdout, Logging.Warn))
 
@@ -56,6 +58,19 @@ end
 end
 
 @testset "recof" begin
+    test_rad = 360.0f0
+    test_xyz = Float32[test_rad * cos(pi / 4), test_rad * sin(pi / 4), 30.0f0]
+    test_hit = NReco.Hit(test_xyz..., 2.0f0)
+    rad_corr = NReco.radial_correction(test_hit, test_rad)
+    @test all(isapprox.(rad_corr, test_xyz))
+
+    wvf1 = first(groupby(wfm, :event_id))
+    wvf1 = combine(groupby(wvf1, :sensor_id), nrow => :q)
+    wvf1 = leftjoin(wvf1, sxyz, on=:sensor_id)
+    disallowmissing!(wvf1, [:x, :y, :z])
+    @test NReco.phistd(wvf1) > 0.0
+    @test NReco.xyzstd(wvf1, "x") > 0.0
+
     @test all(NReco.primary_in_lxe(vdf).parent_id .== 0)
 
     df          = DataFrame(:q1=>Float32[100.0, 120.5, 132.6],
@@ -106,4 +121,98 @@ end
     @test evt_counts.prompt        ==  2
     @test evt_counts.single_prompt == 11
     @test evt_counts.good_prompt   ==  2
+end
+
+
+## Tests for executables
+include("../scripts/makenema.jl")
+@testset "makenema" begin
+    config = Dict(
+        "dir"     => "testdata/"  ,
+        "pattern" => fname[10:end],
+        "odir"    => tempdir()    ,
+        "ofile"   => "evtdf.h5"   ,
+        "filei"   => 1            ,
+        "filel"   => 1            ,
+        "loralgo" => "lor_kmeans" ,
+        "detconf" => "default"
+    )
+    makenema(config)
+
+    outfile = joinpath(config["odir"], config["ofile"])
+    @test isfile(outfile)
+    h5open(outfile) do h5test
+        @test haskey(h5test                   , "configuration"   )
+        @test haskey(h5test["configuration"]  , "RunConfiguration")
+        @test haskey(h5test                   , "selected_events" )
+        @test haskey(h5test["selected_events"], "EventParameters" )
+    end
+end
+
+
+include("../scripts/makeEventTable.jl")
+@testset "makeEventTable" begin
+    config = Dict(
+        "dir"     => "testdata/"  ,
+        "pattern" => fname[10:end],
+        "odir"    => tempdir()    ,
+        "ofile"   => "evtdf.h5"   ,
+        "filei"   => 1            ,
+        "filel"   => 1            ,
+        "config"  => "default"
+    )
+    makezoo(config)
+
+    outfile = joinpath(config["odir"], config["ofile"])
+    @test isfile(outfile)
+    h5open(outfile) do h5test
+        @test haskey(h5test               , "EventCounts")
+        @test haskey(h5test["EventCounts"], "counts"     )
+    end
+end
+
+
+include("../scripts/calibrate_lors.jl")
+@testset "calibrate_lors" begin
+    config = Dict(
+        "input-file"     => "n3-window-1m-LXe-20mm-1-20_reduced.h5",
+        "output-file"    => "n3-window-1m-LXe-20mm-1-20_reduced"   ,
+        "time-parameter" => "ta"                                   ,
+        "trueout"        => false
+    )
+    cal_conf = NReco.CalConfig(
+        input_dir = "testdata/",
+        conf_dir  = ""         ,
+        plot_dir  = tempdir()  ,
+        qmin      =  600.0f0   ,
+        qmax      = 2200.0f0   ,
+        cal_func  = NReco.CalFunction(
+                        cal_grp = "n3-20mm",
+                        cal_std = "cstd"
+                    )
+    )
+    path_in, path_out = define_paths(cal_conf)
+    calibrate_lors(config, cal_conf, path_in, path_out)
+
+    out_file = joinpath(path_out, config["output-file"] * "_mlor.h5")
+    @test isfile(out_file)
+    expected = DataFrame(:dt => Float32[   1.0083368, 0.20166937],
+                         :x1 => Float32[ 357.57245, 103.550095],
+                         :y1 => Float32[  33.63522 , -343.89935],
+                         :z1 => Float32[ 166.94383, -219.65816],
+                         :x2 => Float32[-230.92096, 143.3677],
+                         :y2 => Float32[-272.25385, -329.29483],
+                         :z2 => Float32[-197.30713, -231.62079],
+                         :q1 => Float32[1985.0, 607.0],
+                         :q2 => Float32[814.0, 919.0],
+                         :E1 => Float32[511.0, 511.0],
+                         :E2 => Float32[232.63318, 105.336716])
+    h5open(out_file) do h5test
+        @test haskey(h5test, "reco_info")
+        @test haskey(h5test["reco_info"], "lors")
+        lors = readh5_todf(h5test, "reco_info", "lors")
+        @test nrow(        lors ) ==  2
+        @test length(names(lors)) == 11
+        @test all(all.(eachrow(isapprox.(lors, expected))))
+    end
 end

@@ -151,11 +151,7 @@ Take the estimated radius of interaction (r), and the radius of the sipm
 and return the corrected positions
 """
 function radial_correction(b::Hit, r::Float32)
-
-	ϕ = atan(b.y,b.x)
-    x = r .* cos.(ϕ)
-    y = r .* sin.(ϕ)
-    return x,y,b.z
+	return ATools.calculate_xy(b.x, b.y, r)..., b.z
 end
 
 
@@ -167,7 +163,7 @@ Sqrt(1/Q Sum_i (phi_i - phi_mean) * qi )
 """
 function phistd(hitdf::DataFrame)
 	phi = fphi(hitdf)
-	return wstd(phi, hitdf.q)
+	return std(phi, FrequencyWeights(hitdf.q), corrected=true)
 end
 
 
@@ -179,7 +175,7 @@ Sqrt(1/Q Sum_i (phi_i - phi_mean) * qi )
 """
 function xyzstd(hitdf::DataFrame, column::String="x")
 	x = hitdf[!, column]
-	return wstd(x, hitdf.q)
+	return std(x, FrequencyWeights(hitdf.q), corrected=true)
 end
 
 
@@ -188,7 +184,7 @@ end
 """
 function filter_energies(df::DataFrame, qmin::Float32, qmax::Float32)
     interval = ATools.range_bound(qmin, qmax, ATools.OpenBound)
-    ndfq     = filter(x -> interval.(x.q1) .& interval.(x.q2), df)
+    filter(x -> interval.(x.q1) .& interval.(x.q2), df)
 end
 
 
@@ -202,7 +198,7 @@ function calibration_function(calibFunc::NReco.CalFunction, rmin::Real, rmax::Re
         llin   = read_attribute(h5cal[calibFunc.cal_grp], calibFunc.cal_std * "-lin"  )
         return bias, lconst, llin
     end
-    cal_func = ATools.predict_interaction_radius(ATools.gpol1(line_pars[2:end]),
+    cal_func = ATools.predict_interaction_radius(ATools.gpol1(collect(line_pars[2:end])),
         rmin, rmax, line_pars[1])
     return cal_func
 end
