@@ -1,10 +1,11 @@
-using DataFrames
-using StatsModels
-using Clustering
-using Statistics
-using LinearAlgebra
 using ATools
+
+using Clustering
+using DataFrames
 using HDF5
+using LinearAlgebra
+using Statistics
+using StatsModels
 
 # Selection
 
@@ -29,10 +30,9 @@ end
 
 Return the dot product between each SiPM in the event and the SiPM of max charge
 """
-function xyz_dot(hitdf::DataFrame, simax::Hit)
-	xyzmax = [simax.x, 	simax.y, simax.z]
-	xyzm_dot = dot(xyzmax, xyzmax)
-	return [dot(Array(hitdf[i,1:3]), xyzmax) /xyzm_dot  for i in 1:nrow(hitdf)]
+function xyz_dot(hitdf::DataFrame, simax::DataFrameRow)
+	xyzmax = simax[[:x, :y, :z]]
+	return dot.(eachrow(hitdf[!, [:x, :y, :z]]), Ref(xyzmax))
 end
 
 
@@ -53,8 +53,7 @@ Return the coordinates of the SiPM with maximum charge
 
 """
 function find_xyz_sipm_qmax(hitdf::DataFrame)
-	indx, xmax, qxmax = find_max_xy(hitdf, "x", "q")
-	return Hit(xmax, hitdf.y[indx], hitdf.z[indx], qxmax)
+	hitdf[argmax(hitdf.q), :]
 end
 
 
@@ -65,9 +64,10 @@ Return two data frames, separating the SiPMs in two groups depending on
 the sign of the angle with the SiPM of max charge
 """
 function sipmsel(hdf::DataFrame)
-	simax = find_xyz_sipm_qmax(hdf)
-	npr   = xyz_dot(hdf, simax)
-	return hdf[(npr.>0), :], hdf[(npr.<0), :]
+	simaxq = find_xyz_sipm_qmax(hdf)
+	npr    = xyz_dot(hdf, simaxq)
+	mask   = npr .> 0
+	return hdf[mask, :], hdf[.!mask, :]
 end
 
 
@@ -78,7 +78,7 @@ Return two data frames, separating the SiPMs in two groups depending on
 the value of vector ka (1 or 2)
 """
 function ksipmsel(hdf::DataFrame, ka::Vector{Int64})
-	return hdf[(ka.==2), :], hdf[(ka.==1), :]
+	return hdf[ka.==2, :], hdf[ka.==1, :]
 end
 
 
@@ -90,9 +90,9 @@ Given the dataframe hitdf (with fields x,y,z), return the
 underlying matrix
 """
 function get_hits_as_matrix(hitdf::DataFrame)
-	f = @formula(0 ~ x + y + z)
-	f2 = apply_schema(f, schema(f, hitdf))
-	resp, pred = modelcols(f2, hitdf)
+	f       = @formula(0 ~ x + y + z)
+	f2      = apply_schema(f, schema(f, hitdf))
+	_, pred = modelcols(f2, hitdf)
 	return transpose(pred)
 end
 
@@ -120,9 +120,9 @@ Returns two estimations of vertices. One based in pure kmeans, the
 other in barycenter.
 """
 function lor_kmeans(hitdf::DataFrame)
-	Mhits = get_hits_as_matrix(hitdf)  # take the underlying matrix
-	kr = kmeans(Mhits, 2)              # apply kmeans
-	ka = assignments(kr) # get the assignments of points to clusters
+	Mhits = Matrix(hitdf[!, [:x, :y, :z]])
+	kr    = kmeans(transpose(Mhits), 2)
+	ka    = assignments(kr)
 
 	hq2df, hq1df = ksipmsel(hitdf, ka)   # select using kmeans list
 	b1 = baricenter(hq1df)     # baricenters
@@ -136,11 +136,8 @@ end
 	returns the barycenter of a cluster of hits
 """
 function baricenter(hdf::DataFrame)
-	function xq(hdf::DataFrame, pos::String)
-		return sum(hdf[!,pos] .* hdf.q) / qt
-	end
-	qt = sum(hdf.q)
-	return Hit(xq(hdf, "x"), xq(hdf, "y"), xq(hdf, "z"), qt)
+	xyzmeans = mean(Matrix(hdf[!, [:x, :y, :z]]), weights(hdf.q), dims=1)
+	return Hit(xyzmeans[1], xyzmeans[2], xyzmeans[3], sum(hdf.q))
 end
 
 
