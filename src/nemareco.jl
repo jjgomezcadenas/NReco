@@ -1,7 +1,8 @@
+using ATools
+
 using DataFrames
 using Distributions
 using StatsBase
-using ATools
 
 
 """
