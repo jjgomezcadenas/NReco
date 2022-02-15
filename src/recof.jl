@@ -99,6 +99,19 @@ end
 # lors
 
 """
+	reassign_labels(b1::Hit, df1::DataFrame, b2::Hit, df2::DataFrame)
+Check the phi of the two reconstruced positions and assign positive
+phi to 1. If both are positve, no change is made.
+"""
+function reassign_labels(b1::Hit, df1::DataFrame, b2::Hit, df2::DataFrame)
+	phi1 = atan(b1.y, b1.x)
+	if phi1 >= 0.0
+		return b1, df1, b2, df2
+	end
+	return b2, df2, b1, df1
+end
+
+"""
 	lor_maxq(hitdf::DataFrame)
 
 Compute lors using the SiPM of max charge (maxq algo) to divide the event

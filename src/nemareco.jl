@@ -125,6 +125,9 @@ function recovent(event     ::Integer,
 		return nothing
 	end
 
+	## Assign numbers according to positive/negative phi.
+	b1, hq1df, b2, hq2df = reassign_labels(b1, hq1df, b2, hq2df)
+
 	# find true position (and correlate with barycenter)
 	mc_truth = true_interaction(b1, b2, volumes, vertices)
 	if isnothing(mc_truth)
