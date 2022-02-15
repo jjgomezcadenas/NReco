@@ -25,13 +25,13 @@ function true_interaction(b1::Hit, b2::Hit,
 	end
 
 	vrts = filter(df -> in(volumes).(df.volume_id), vertices)
-	try
-		vrts = combine(df -> df[argmin(df.t), :], groupby(vrts, :track_id))
-	catch
+	if isempty(vrts)
 		@warn "Warning, no valid MC true vertex for current event."
 		# TODO deal with these events correctly without getting weird rmin/rmax.
 		return nothing
 	end
+
+	vrts = combine(df -> df[argmin(df.t), :], groupby(vrts, :track_id))
 	
 	transform!(vrts, [:x, :y, :z] => ByRow(dist_to_hit(b1)) => :dist1,
 	                 [:x, :y, :z] => ByRow(dist_to_hit(b2)) => :dist2)
