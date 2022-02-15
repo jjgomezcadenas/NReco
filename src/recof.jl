@@ -1,10 +1,11 @@
-using DataFrames
-using StatsModels
-using Clustering
-using Statistics
-using LinearAlgebra
 using ATools
+
+using Clustering
+using DataFrames
 using HDF5
+using LinearAlgebra
+using Statistics
+using StatsModels
 
 # Selection
 
@@ -77,7 +78,7 @@ Return two data frames, separating the SiPMs in two groups depending on
 the value of vector ka (1 or 2)
 """
 function ksipmsel(hdf::DataFrame, ka::Vector{Int64})
-	return hdf[(ka.==2), :], hdf[(ka.==1), :]
+	return hdf[ka.==2, :], hdf[ka.==1, :]
 end
 
 
