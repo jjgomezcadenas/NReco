@@ -178,6 +178,24 @@ end
 
 
 """
+	transverse_angle(hitdf::DataFrame, adjust_cuadrants::Bool=true)
+Calculate the transverse (phi) angle for each entry in the DataFrame
+and adjust the negative values of the third cuadrant if requested.
+"""
+function transverse_angle(hitdf::DataFrame, adjust_cuadrants::Bool=true)
+	phi = fphi(hitdf)
+	if adjust_cuadrants
+		quad3 = phi .< -pi / 2
+		npos  = count(phi .> 0)
+		if npos > 0 && count(quad3) > 0
+			phi[quad3] .= 2 * pi .+ phi[quad3]
+		end
+	end
+	return phi
+end
+
+
+"""
 	xyzstd(hitdf::DataFrame)
 
 Compute the std deviation in x weighted by charge, e.g:

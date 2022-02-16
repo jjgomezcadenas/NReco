@@ -71,6 +71,11 @@ end
     @test NReco.phistd(wvf1) > 0.0
     @test NReco.xyzstd(wvf1, "x") > 0.0
 
+    phis_nadj = NReco.transverse_angle(wvf1, false)
+    @test all(abs.(phis_nadj) .<= pi)
+    phis_adj  = NReco.transverse_angle(wvf1)
+    @test count(phis_adj .> pi) > 0
+
     @test all(NReco.primary_in_lxe(vdf).parent_id .== 0)
 
     df          = DataFrame(:q1=>Float32[100.0, 120.5, 132.6],
