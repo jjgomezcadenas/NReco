@@ -139,9 +139,9 @@ function recovent(event     ::Integer,
 
 	## Weights and phi positions
 	int1_weights = FrequencyWeights(hq1df.q)
-	phi1_values  = fphi(hq1df)
+	phi1_values  = transverse_angle(hq1df)
 	int2_weights = FrequencyWeights(hq2df.q)
-	phi2_values  = fphi(hq2df)
+	phi2_values  = transverse_angle(hq2df)
 
 	true_rad1 = rxy(df1.x, df1.y)
 	true_rad2 = rxy(df2.x, df2.y)
