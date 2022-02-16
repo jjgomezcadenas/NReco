@@ -36,7 +36,7 @@ function true_interaction(b1::Hit, b2::Hit,
 	transform!(vrts, [:x, :y, :z] => ByRow(dist_to_hit(b1)) => :dist1,
 	                 [:x, :y, :z] => ByRow(dist_to_hit(b2)) => :dist2)
 
-	cols = [:process_id, :x, :y, :z, :pre_KE]
+	cols = [:process_id, :x, :y, :z, :t, :pre_KE]
 	## Allow them to be the same for now, should only happen
 	## for bad reconstruction with no separation.
 	row1 = argmin(vrts.dist1)
@@ -198,11 +198,13 @@ function recovent(event     ::Integer,
 	xt1 = df1.x,
 	yt1 = df1.y,
 	zt1 = df1.z,
+	ti1 = df1.t,
 	t1  = tmin1,
 	tr1 = minimum(hq1df.trmin),
 	xt2 = df2.x,
 	yt2 = df2.y,
 	zt2 = df2.z,
+	ti2 = df2.t,
 	t2  = tmin2,
 	tr2 = minimum(hq2df.trmin),
 	# find r1 and r2 (from True info)
