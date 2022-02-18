@@ -156,10 +156,10 @@ function recovent(event     ::Integer,
 	t1s = sort(hq1df.trmin)
 	t2s = sort(hq2df.trmin)
 
-	tmin1 = minimum(hq1df.tmin)
-	tmin2 = minimum(hq2df.tmin)
-	ht1   = select_by_column_value(hq1df, "tmin", tmin1)
-	ht2   = select_by_column_value(hq2df, "tmin", tmin2)
+	ht1   = hq1df[argmin(hq1df.tmin), :]
+	ht2   = hq2df[argmin(hq2df.tmin), :]
+	tmin1 = ht1.tmin
+	tmin2 = ht2.tmin
 
 	@info " New (x,y,z) positions estimated from r1, r2 & r1q, r2q"
 	@info " from r1:  x1 = $(xyz1[1]), y1=$(xyz1[2]), z1=$(xyz1[3])"

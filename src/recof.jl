@@ -185,9 +185,9 @@ and adjust the negative values of the third cuadrant if requested.
 function transverse_angle(hitdf::DataFrame, adjust_cuadrants::Bool=true)
 	phi = fphi(hitdf)
 	if adjust_cuadrants
-		quad3 = phi .< -pi / 2
-		npos  = count(phi .> 0)
-		if npos > 0 && count(quad3) > 0
+		quad3  = phi .< -pi / 2
+		quad12 = any(phi .> 0)
+		if quad12 && any(quad3)
 			phi[quad3] .= 2 * pi .+ phi[quad3]
 		end
 	end
