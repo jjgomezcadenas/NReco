@@ -92,6 +92,41 @@ end
     @test all(isapprox.(2 * df[!, :zstd1], df[!, :r1x]))
 end
 
+@testset "recohits" begin
+    grp_wvf = groupby(wfm, :event_id)
+    wvf1    = first(grp_wvf)
+
+    slct_sens = NReco.select_sensors(wvf1, dconf.ecut, dconf.pde, dconf.sigma_tof)
+    @test typeof(slct_sens) <: GroupedDataFrame
+    @test all(in([:sensor_id]).(groupcols(slct_sens)))
+    expected_columns = ["event_id", "sensor_id", "time", "dt", "mtime"]
+    @test all(in(expected_columns).(names(slct_sens)))
+    @test all(combine(slct_sens, nrow).nrow .> dconf.ecut)
+
+    xyzqt = NReco.sensor_positions(slct_sens, sxyz)
+    @test typeof(xyzqt) <: DataFrame
+    expected_columns = [:sensor_id, :tmin, :trmin, :q, :x, :y, :z]
+    @test all(in(expected_columns).(propertynames(xyzqt)))
+    @test length(unique(xyzqt.sensor_id)) == length(xyzqt.sensor_id)
+
+    mean_time = NReco.average_first_hits(slct_sens, xyzqt.sensor_id[1:20], dconf.ntof)
+    min_max = extrema(filter(row -> in(xyzqt.sensor_id[1:20])(row.sensor_id), xyzqt).trmin)
+    @test (mean_time > min_max[1]) && (mean_time < min_max[2])
+
+    inbound = ATools.range_bound(dconf.qmin, dconf.qmax, ATools.OpenBound)
+    hemis1  = NReco.split_hemispheres(wvf1, sxyz, dconf,
+                                      inbound, NReco.lor_maxq)
+    ## The first event is rejected due to low charge.
+    @test isnothing(hemis1)
+    hemis2 = NReco.split_hemispheres(grp_wvf[(4995005,)], sxyz, dconf,
+                                     inbound, NReco.lor_maxq)
+    @test !isnothing(hemis2)
+    @test length(hemis2) == 6
+    @test typeof(hemis2[1]) <: NReco.Hit && typeof(hemis2[2]) <: NReco.Hit
+    @test typeof(hemis2[3]) <: Float32   && typeof(hemis2[4]) <: Float32
+    @test typeof(hemis2[5]) <: DataFrame && typeof(hemis2[6]) <: DataFrame
+end
+
 @testset "nemareco" begin
     exp_keys = [:event_id, :phot1, :phot2, :nsipm1, :nsipm2, :q1, :q2,
 	            :E1, :E2, :r1,  :r2, :r1x, :r2x,

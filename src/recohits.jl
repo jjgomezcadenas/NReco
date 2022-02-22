@@ -34,8 +34,8 @@ function recohits(event     ::Integer,
 
 	# add a column of gaussian random numbers
 	# representing the smearing of electronics and sensor
-	tdist = Normal(0.0, sigma_tof)
-	wfm[!, :dt] = Float32.(rand(tdist, nrow(wfm)))
+	tdist = Normal(0.0f0, sigma_tof)
+	wfm[!, :dt] = rand(tdist, nrow(wfm))
 
 	# add column of smeared times to true times
 	transform!(wfm, [:time, :dt] => (+) => :mtime)
@@ -58,4 +58,97 @@ function recohits(event     ::Integer,
 	disallowmissing!(xyzqt, [:x, :y, :z])
 
 	return xyzqt[!, [:x, :y, :z, :tmin, :trmin, :q]]
+end
+
+
+"""
+	select_sensors(waveform::SubDataFrame, qcut     ::Float32,
+	               pde     ::Float32     , sigma_tof::Float32)
+
+Smear and select the SiPMs.
+"""
+function select_sensors(waveform::SubDataFrame, qcut     ::Float32,
+	                    pde     ::Float32     , sigma_tof::Float32)
+	# Filter according to probability and PDE (pass if prob < pde)
+	wfm = waveform[rand(Float32, nrow(waveform)) .< pde, :]
+
+	if nrow(wfm) == 0
+		return nothing
+	end
+
+	# add a column of gaussian random numbers
+	# representing the smearing of electronics and sensor
+	tdist = Normal(0.0f0, sigma_tof)
+	wfm[!, :dt] = rand(tdist, nrow(wfm))
+
+	# add column of smeared times to true times
+	transform!(wfm, [:time, :dt] => (+) => :mtime)
+	
+	 # cut on total charge (> qcut)
+	return filter(grp -> nrow(grp) .> qcut, groupby(wfm, :sensor_id))
+end
+
+
+"""
+	sensor_positions(waveform::GroupedDataFrame, sensor_xyz::DataFrame)
+
+Get the minima for each sensor and the summed charge and combine with positions.
+"""
+function sensor_positions(waveform::GroupedDataFrame, sensor_xyz::DataFrame)
+	wfm_min = combine(waveform, :time => minimum => :tmin,
+	                  :mtime => minimum => :trmin, nrow => :q)
+	# Get the positions of each of the selected sensors.
+	xyzqt = leftjoin(wfm_min, sensor_xyz, on=:sensor_id)
+	disallowmissing(xyzqt, [:x, :y, :z])
+end
+
+
+"""
+	average_first_hits(waveform::GroupedDataFrame, sensors::Vector{Int64}, ntof::Int64)
+calculate the average of the first ntof photons in a set of sensors.
+"""
+function average_first_hits(waveform::GroupedDataFrame, sensors::Vector{Int64}, ntof::Int64)
+	nsens        = min(length(sensors), ntof)
+	h_sens       = in(sensors)
+	sensor_times = combine(filter(grp -> h_sens(first(grp.sensor_id)), waveform), :mtime)
+	mean(sort(sensor_times.mtime)[1:nsens])
+end
+
+
+"""
+	split_hemispheres(waveform  ::SubDataFrame,
+					  sensor_xyz::DataFrame   ,
+					  dc        ::DetConf     ,
+					  q_bound   ::Function    ,
+					  lor_algo  ::Function    )
+
+Reconstruct the SiPM hits (smearing etc) and split into hemispheres.
+"""
+function split_hemispheres(waveform  ::SubDataFrame,
+	                       sensor_xyz::DataFrame   ,
+						   dc        ::DetConf     ,
+	                       q_bound   ::Function    ,
+						   lor_algo  ::Function    )
+	reco_wvf = select_sensors(waveform, dc.ecut, dc.pde, dc.sigma_tof)
+
+	if isnothing(reco_wvf) || length(keys(reco_wvf)) < 2
+		return nothing
+	end
+
+	## Get the minima with positions
+	xyzqt = sensor_positions(reco_wvf, sensor_xyz)
+
+	## Split into hemispheres
+	b1, b2, hq1df, hq2df = lor_algo(xyzqt)
+
+	if q_bound(sum(hq1df.q)) && q_bound(sum(hq2df.q))
+		## Assign numbers according to positive/negative phi.
+		b1, hq1df, b2, hq2df = reassign_labels(b1, hq1df, b2, hq2df)
+		
+		## Get average start times for hemispheres
+		ta1 = average_first_hits(reco_wvf, hq1df.sensor_id, dc.ntof)
+		ta2 = average_first_hits(reco_wvf, hq2df.sensor_id, dc.ntof)
+		return b1, b2, ta1, ta2, hq1df, hq2df
+	end
+	return nothing
 end
