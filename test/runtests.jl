@@ -14,7 +14,7 @@ logger = global_logger(SimpleLogger(stdout, Logging.Warn))
 
 fname = "testdata/n3-window-1m-LXe-20mm-1-20.h5"
 pdf   = NReco.read_abc(fname)
-dconf = NReco.DetConf(0.3f0, 0.05f0, 2.0f0, 100.0f0, 5000.0f0, 7)
+dconf = NReco.DetConf(0.3f0, 0.05f0, 2.0f0, 100.0f0, 5000.0f0, 7, 3)
 sxyz  = pdf.sensor_xyz
 wfm   = pdf.waveform
 vdf   = pdf.vertices
@@ -109,9 +109,9 @@ end
     @test all(in(expected_columns).(propertynames(xyzqt)))
     @test length(unique(xyzqt.sensor_id)) == length(xyzqt.sensor_id)
 
-    mean_time = NReco.average_first_hits(slct_sens, xyzqt.sensor_id[1:20], dconf.ntof)
+    mean_time = NReco.average_first_hits(slct_sens, xyzqt.sensor_id[1:20], dconf)
     min_max = extrema(filter(row -> in(xyzqt.sensor_id[1:20])(row.sensor_id), xyzqt).trmin)
-    @test (mean_time > min_max[1]) && (mean_time < min_max[2])
+    @test (mean_time >= min_max[1]) && (mean_time < min_max[2])
 
     inbound = ATools.range_bound(dconf.qmin, dconf.qmax, ATools.OpenBound)
     hemis1  = NReco.split_hemispheres(wvf1, sxyz, dconf,

@@ -104,14 +104,16 @@ end
 
 
 """
-	average_first_hits(waveform::GroupedDataFrame, sensors::Vector{Int64}, ntof::Int64)
+	average_first_hits(waveform::GroupedDataFrame, sensors::Vector{Int64}, dc::DetConf)
 calculate the average of the first ntof photons in a set of sensors.
 """
-function average_first_hits(waveform::GroupedDataFrame, sensors::Vector{Int64}, ntof::Int64)
-	nsens        = min(length(sensors), ntof)
+function average_first_hits(waveform::GroupedDataFrame, sensors::Vector{Int64}, dc::DetConf)
+	nsens        = min(length(sensors), dc.ntof)
 	h_sens       = in(sensors)
 	sensor_times = combine(filter(grp -> h_sens(first(grp.sensor_id)), waveform), :mtime)
-	mean(sort(sensor_times.mtime)[1:nsens])
+	sens_t       = sort(sensor_times.mtime)[1:nsens]
+	mask         = sens_t .<= sens_t[1] + dc.sigma_tof * dc.nsigma
+	mean(sens_t[mask])
 end
 
 
@@ -146,8 +148,8 @@ function split_hemispheres(waveform  ::SubDataFrame,
 		b1, hq1df, b2, hq2df = reassign_labels(b1, hq1df, b2, hq2df)
 		
 		## Get average start times for hemispheres
-		ta1 = average_first_hits(reco_wvf, hq1df.sensor_id, dc.ntof)
-		ta2 = average_first_hits(reco_wvf, hq2df.sensor_id, dc.ntof)
+		ta1 = average_first_hits(reco_wvf, hq1df.sensor_id, dc)
+		ta2 = average_first_hits(reco_wvf, hq2df.sensor_id, dc)
 		return b1, b2, ta1, ta2, hq1df, hq2df
 	end
 	return nothing
