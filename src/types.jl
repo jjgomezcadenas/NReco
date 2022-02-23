@@ -26,6 +26,7 @@ Defines detector configuration
 	qmin     ::Float32 =  100.0
 	qmax     ::Float32 = 5000.0
 	ntof     ::Integer =    7
+	nsigma   ::Integer =    3
 end
 
 
