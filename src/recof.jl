@@ -134,12 +134,12 @@ other in barycenter.
 """
 function lor_kmeans(hitdf::DataFrame)
 	Mhits = Matrix(hitdf[!, [:x, :y, :z]])
-	kr    = kmeans(transpose(Mhits), 2)
+	kr    = kmeans(transpose(Mhits), 2, weights=hitdf.q)
 	ka    = assignments(kr)
 
 	hq2df, hq1df = ksipmsel(hitdf, ka)   # select using kmeans list
-	b1 = baricenter(hq1df)     # baricenters
-	b2 = baricenter(hq2df)
+	b1 = kr.centers[:, 1]     # baricenters
+	b2 = kr.centers[:, 2]
 	return b1, b2, hq1df, hq2df
 end
 
