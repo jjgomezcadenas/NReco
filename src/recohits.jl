@@ -143,7 +143,7 @@ function split_hemispheres(waveform  ::SubDataFrame,
 	## Split into hemispheres
 	b1, b2, hq1df, hq2df = lor_algo(xyzqt)
 
-	if q_bound(sum(hq1df.q)) && q_bound(sum(hq2df.q))
+	if q_bound(b1.q) && q_bound(b2.q)
 		## Assign numbers according to positive/negative phi.
 		b1, hq1df, b2, hq2df = reassign_labels(b1, hq1df, b2, hq2df)
 		

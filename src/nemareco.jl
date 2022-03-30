@@ -110,23 +110,6 @@ function recovent(event     ::Integer,
 		  volumes   ::Vector{Int64},
 		  waveform  ::SubDataFrame,
 		  lor_algo  ::Function)
-	# hit dataframe
-	#hitdf = recohits(event, sensor_xyz, waveform, dc.ecut, dc.pde, dc.sigma_tof)
-
-	#if !check_valid_hits(hitdf, event)
-	#	return nothing
-	#end
-
-	# reconstruct (x,y) : barycenter
-	#b1, b2, hq1df, hq2df = lor_algo(hitdf)
-	#@info " barycenters" b1 b2
-
-	#if !check_valid_charge(hq1df, hq2df, dc)
-	#	return nothing
-	#end
-
-	## Assign numbers according to positive/negative phi.
-	#b1, hq1df, b2, hq2df = reassign_labels(b1, hq1df, b2, hq2df)
 	q_bound     = ATools.range_bound(dc.qmin, dc.qmax, ATools.OpenBound)
 	hemispheres = split_hemispheres(waveform, sensor_xyz,
 	                                dc, q_bound, lor_algo)
@@ -155,13 +138,6 @@ function recovent(event     ::Integer,
 	# New (x,y) positions estimated from r1, r2
 	xyz1 = radial_correction(b1, true_rad1)
 	xyz2 = radial_correction(b2, true_rad2)
-
-	#ntof1 = min(dc.ntof, nrow(hq1df))
-	#ntof2 = min(dc.ntof, nrow(hq2df))
-
-	# sort reco times in ascending order
-	#t1s = sort(hq1df.trmin)
-	#t2s = sort(hq2df.trmin)
 
 	ht1   = hq1df[argmin(hq1df.tmin), :]
 	ht2   = hq2df[argmin(hq2df.tmin), :]
@@ -236,8 +212,6 @@ function recovent(event     ::Integer,
 	y2 = xyz2[2],
 	z2 = xyz2[3],
 	# Average arrival time of first ntof SiPMs
-	#ta1 = mean(t1s[1:ntof1]),
-	#ta2 = mean(t2s[1:ntof2]),
 	ta1 = ta1,
 	ta2 = ta2,
 	# Positions of SiPM with tmin
