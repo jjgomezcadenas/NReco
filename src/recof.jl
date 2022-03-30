@@ -2,6 +2,7 @@ using ATools
 
 using Clustering
 using DataFrames
+using Distances
 using HDF5
 using LinearAlgebra
 using Statistics
@@ -133,14 +134,22 @@ Returns two estimations of vertices. One based in pure kmeans, the
 other in barycenter.
 """
 function lor_kmeans(hitdf::DataFrame)
-	Mhits = Matrix(hitdf[!, [:x, :y, :z]])
-	kr    = kmeans(transpose(Mhits), 2, weights=hitdf.q)
-	ka    = assignments(kr)
+	Mhits = transpose(Matrix(hitdf[!, [:x, :y, :z]]))
+	kr    = kmeans(Mhits, 2, weights=hitdf.q)
 
-	hq2df, hq1df = ksipmsel(hitdf, ka)   # select using kmeans list
-	b1 = kr.centers[:, 1]     # baricenters
-	b2 = kr.centers[:, 2]
-	return b1, b2, hq1df, hq2df
+	## Check that the cluster definitions are good.
+	## Silhouette above 0.99 generally means k=2 a good model.
+	## TODO Make minimum mean silhouette configuration variable?
+	mean_sil = mean(silhouettes(kr, pairwise(SqEuclidean(), Mhits)))
+
+	if mean_sil >= 0.99
+		ka = assignments(kr)
+		hq2df, hq1df = ksipmsel(hitdf, ka)   # select using kmeans list
+		b1 = Hit(kr.centers[:, 1]..., sum(hitdf.q)) # baricenters
+		b2 = Hit(kr.centers[:, 2]..., sum(hitdf.q))
+		return b1, b2, hq1df, hq2df
+	end
+	return Hit(0, 0, 0, 0), Hit(0, 0, 0, 0), empty(hitdf), empty(hitdf)
 end
 
 
