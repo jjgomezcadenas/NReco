@@ -2,6 +2,7 @@ using ATools
 
 using Clustering
 using DataFrames
+using Distances
 using HDF5
 using LinearAlgebra
 using Statistics
@@ -99,6 +100,19 @@ end
 # lors
 
 """
+	reassign_labels(b1::Hit, df1::DataFrame, b2::Hit, df2::DataFrame)
+Check the phi of the two reconstruced positions and assign positive
+phi to 1. If both are positve, no change is made.
+"""
+function reassign_labels(b1::Hit, df1::DataFrame, b2::Hit, df2::DataFrame)
+	phi1 = atan(b1.y, b1.x)
+	if phi1 >= 0.0
+		return b1, df1, b2, df2
+	end
+	return b2, df2, b1, df1
+end
+
+"""
 	lor_maxq(hitdf::DataFrame)
 
 Compute lors using the SiPM of max charge (maxq algo) to divide the event
@@ -120,14 +134,22 @@ Returns two estimations of vertices. One based in pure kmeans, the
 other in barycenter.
 """
 function lor_kmeans(hitdf::DataFrame)
-	Mhits = Matrix(hitdf[!, [:x, :y, :z]])
-	kr    = kmeans(transpose(Mhits), 2)
-	ka    = assignments(kr)
+	Mhits = transpose(Matrix(hitdf[!, [:x, :y, :z]]))
+	kr    = kmeans(Mhits, 2, weights=hitdf.q)
 
-	hq2df, hq1df = ksipmsel(hitdf, ka)   # select using kmeans list
-	b1 = baricenter(hq1df)     # baricenters
-	b2 = baricenter(hq2df)
-	return b1, b2, hq1df, hq2df
+	## Check that the cluster definitions are good.
+	## Silhouette above 0.99 generally means k=2 a good model.
+	## TODO Make minimum mean silhouette configuration variable?
+	mean_sil = mean(silhouettes(kr, pairwise(SqEuclidean(), Mhits)))
+
+	if mean_sil >= 0.99
+		ka = assignments(kr)
+		hq2df, hq1df = ksipmsel(hitdf, ka)   # select using kmeans list
+		b1 = Hit(kr.centers[:, 1]..., sum(hitdf.q)) # baricenters
+		b2 = Hit(kr.centers[:, 2]..., sum(hitdf.q))
+		return b1, b2, hq1df, hq2df
+	end
+	return Hit(0, 0, 0, 0), Hit(0, 0, 0, 0), empty(hitdf), empty(hitdf)
 end
 
 
@@ -161,6 +183,24 @@ Sqrt(1/Q Sum_i (phi_i - phi_mean) * qi )
 function phistd(hitdf::DataFrame)
 	phi = fphi(hitdf)
 	return std(phi, FrequencyWeights(hitdf.q), corrected=true)
+end
+
+
+"""
+	transverse_angle(hitdf::DataFrame, adjust_cuadrants::Bool=true)
+Calculate the transverse (phi) angle for each entry in the DataFrame
+and adjust the negative values of the third cuadrant if requested.
+"""
+function transverse_angle(hitdf::DataFrame, adjust_cuadrants::Bool=true)
+	phi = fphi(hitdf)
+	if adjust_cuadrants
+		quad3  = phi .< -pi / 2
+		quad12 = any(phi .> 0)
+		if quad12 && any(quad3)
+			phi[quad3] .= 2 * pi .+ phi[quad3]
+		end
+	end
+	return phi
 end
 
 

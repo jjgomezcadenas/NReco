@@ -14,7 +14,7 @@ logger = global_logger(SimpleLogger(stdout, Logging.Warn))
 
 fname = "testdata/n3-window-1m-LXe-20mm-1-20.h5"
 pdf   = NReco.read_abc(fname)
-dconf = NReco.DetConf(0.3f0, 0.05f0, 2.0f0, 100.0f0, 5000.0f0, 7)
+dconf = NReco.DetConf(0.3f0, 0.05f0, 2.0f0, 100.0f0, 5000.0f0, 7, 3)
 sxyz  = pdf.sensor_xyz
 wfm   = pdf.waveform
 vdf   = pdf.vertices
@@ -71,6 +71,11 @@ end
     @test NReco.phistd(wvf1) > 0.0
     @test NReco.xyzstd(wvf1, "x") > 0.0
 
+    phis_nadj = NReco.transverse_angle(wvf1, false)
+    @test all(abs.(phis_nadj) .<= pi)
+    phis_adj  = NReco.transverse_angle(wvf1)
+    @test count(phis_adj .> pi) > 0
+
     @test all(NReco.primary_in_lxe(vdf).parent_id .== 0)
 
     df          = DataFrame(:q1=>Float32[100.0, 120.5, 132.6],
@@ -87,13 +92,48 @@ end
     @test all(isapprox.(2 * df[!, :zstd1], df[!, :r1x]))
 end
 
+@testset "recohits" begin
+    grp_wvf = groupby(wfm, :event_id)
+    wvf1    = first(grp_wvf)
+
+    slct_sens = NReco.select_sensors(wvf1, dconf.ecut, dconf.pde, dconf.sigma_tof)
+    @test typeof(slct_sens) <: GroupedDataFrame
+    @test all(in([:sensor_id]).(groupcols(slct_sens)))
+    expected_columns = ["event_id", "sensor_id", "time", "dt", "mtime"]
+    @test all(in(expected_columns).(names(slct_sens)))
+    @test all(combine(slct_sens, nrow).nrow .> dconf.ecut)
+
+    xyzqt = NReco.sensor_positions(slct_sens, sxyz)
+    @test typeof(xyzqt) <: DataFrame
+    expected_columns = [:sensor_id, :tmin, :trmin, :q, :x, :y, :z]
+    @test all(in(expected_columns).(propertynames(xyzqt)))
+    @test length(unique(xyzqt.sensor_id)) == length(xyzqt.sensor_id)
+
+    mean_time = NReco.average_first_hits(slct_sens, xyzqt.sensor_id[1:20], dconf)
+    min_max = extrema(filter(row -> in(xyzqt.sensor_id[1:20])(row.sensor_id), xyzqt).trmin)
+    @test (mean_time >= min_max[1]) && (mean_time < min_max[2])
+
+    inbound = ATools.range_bound(dconf.qmin, dconf.qmax, ATools.OpenBound)
+    hemis1  = NReco.split_hemispheres(wvf1, sxyz, dconf,
+                                      inbound, NReco.lor_maxq)
+    ## The first event is rejected due to low charge.
+    @test isnothing(hemis1)
+    hemis2 = NReco.split_hemispheres(grp_wvf[(4995005,)], sxyz, dconf,
+                                     inbound, NReco.lor_maxq)
+    @test !isnothing(hemis2)
+    @test length(hemis2) == 6
+    @test typeof(hemis2[1]) <: NReco.Hit && typeof(hemis2[2]) <: NReco.Hit
+    @test typeof(hemis2[3]) <: Float32   && typeof(hemis2[4]) <: Float32
+    @test typeof(hemis2[5]) <: DataFrame && typeof(hemis2[6]) <: DataFrame
+end
+
 @testset "nemareco" begin
     exp_keys = [:event_id, :phot1, :phot2, :nsipm1, :nsipm2, :q1, :q2,
 	            :E1, :E2, :r1,  :r2, :r1x, :r2x,
                 :phistd1, :zstd1, :widz1, :widphi1, :corrzphi1,
                 :phistd2, :zstd2, :widz2, :widphi2, :corrzphi2,
 			    :xs, :ys, :zs, :ux, :uy, :uz, :xt1, :yt1, :zt1,
-                :t1, :xt2, :yt2, :zt2, :t2, :x1, :y1, :z1,
+                :ti1, :t1, :xt2, :yt2, :zt2, :ti2, :t2, :x1, :y1, :z1,
                 :x2, :y2, :z2, :xr1, :yr1, :zr1, :tr1,
                 :xr2, :yr2, :zr2, :tr2, :xb1, :yb1, :zb1, :ta1,
 			    :xb2, :yb2, :zb2, :ta2]
